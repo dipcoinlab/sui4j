@@ -43,7 +43,7 @@ Sui4J is a Java SDK designed specifically for the Sui blockchain, providing comp
 ### 🎯 Gradle Dependency
 
 ```gradle
-implementation 'com.dipcoin:sui4j:1.0-SNAPSHOT'
+implementation 'com.dipcoin:sui4j:1.0.0'
 ```
 
 ## 🎯 Basic Usage
@@ -53,86 +53,95 @@ implementation 'com.dipcoin:sui4j:1.0-SNAPSHOT'
 The following is a complete usage example showing how to start from creating an HTTP service instance, generate Ed25519 key pairs, and finally call Pyth updatePrice PTB operations:
 
 ```java
-import protocol.io.dipcoin.sui.SuiClient;
-import http.protocol.io.dipcoin.sui.HttpService;
-import crypto.io.dipcoin.sui.Ed25519KeyPair;
-import crypto.io.dipcoin.sui.SuiKeyPair;
-import core.pyth.io.dipcoin.sui.PythClient;
-import model.pyth.io.dipcoin.sui.PythNetwork;
-import transaction.types.bcs.io.dipcoin.sui.ProgrammableTransaction;
-import transaction.types.bcs.io.dipcoin.sui.Command;
-import transaction.types.bcs.io.dipcoin.sui.ProgrammableMoveCall;
-import transaction.types.bcs.io.dipcoin.sui.Argument;
-import client.io.dipcoin.sui.TransactionBuilder;
-import gas.types.bcs.io.dipcoin.sui.GasData;
-import gas.types.bcs.io.dipcoin.sui.SuiObjectRef;
+package io.dipcoin.sui;
+
+import io.dipcoin.sui.bcs.types.gas.GasData;
+import io.dipcoin.sui.bcs.types.gas.SuiObjectRef;
+import io.dipcoin.sui.bcs.types.transaction.Argument;
+import io.dipcoin.sui.bcs.types.transaction.Command;
+import io.dipcoin.sui.bcs.types.transaction.ProgrammableMoveCall;
+import io.dipcoin.sui.bcs.types.transaction.ProgrammableTransaction;
+import io.dipcoin.sui.client.TransactionBuilder;
+import io.dipcoin.sui.crypto.Ed25519KeyPair;
+import io.dipcoin.sui.crypto.SuiKeyPair;
+import io.dipcoin.sui.protocol.SuiClient;
+import io.dipcoin.sui.protocol.http.HttpService;
+import io.dipcoin.sui.pyth.core.PythClient;
+import io.dipcoin.sui.pyth.model.PythNetwork;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+/**
+ * @author : Same
+ * @datetime : 2025/9/18 16:37
+ * @Description : Sui4jBasicExample
+ */
 public class Sui4jBasicExample {
-    public static void main(String[] args) throws IOException {
-        // 1. Create HTTP service instance
-        HttpService httpService = new HttpService("https://fullnode.testnet.sui.io:443");
 
-        // 2. Build Sui client
-        SuiClient suiClient = SuiClient.build(httpService);
+  public static void main(String[] args) throws IOException {
+    // 1. Create HTTP service instance
+    HttpService httpService = new HttpService("https://fullnode.testnet.sui.io:443");
 
-        // 3. Create Pyth client
-        PythClient pythClient = new PythClient(suiClient);
+    // 2. Build Sui client
+    SuiClient suiClient = SuiClient.build(httpService);
 
-        // 4. Generate Ed25519 key pair
-        SuiKeyPair keyPair = Ed25519KeyPair.generate();
-        System.out.println("Generated address: " + keyPair.address());
-        System.out.println("Private key: " + keyPair.encodePrivateKey());
+    // 3. Create Pyth client
+    PythClient pythClient = new PythClient(suiClient);
 
-        // 5. Prepare Pyth price update parameters
-        String feedId = "0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b";
+    // 4. Generate Ed25519 key pair
+    SuiKeyPair keyPair = Ed25519KeyPair.generate();
+    System.out.println("Generated address: " + keyPair.address());
+    System.out.println("Private key: " + keyPair.encodePrivateKey());
 
-        // 6. Build PTB update price transaction
-        ProgrammableTransaction programmableTx = pythClient.updatePrice(feedId, PythNetwork.TESTNET);
+    // 5. Prepare Pyth price update parameters
+    String feedId = "0xf9c0172ba10dfa4d19088d94f5bf61d3b54d5bd7483a322a982e1373ee8ea31b";
 
-        // 7. Add custom Move call (optional)
-        ProgrammableMoveCall moveCall = new ProgrammableMoveCall(
-                "0xb5f4bf7d29a8e82eb5de521cf556f1953c9fdd3d73e7f371a156c6e1ee64f24b",
-                "main",
-                "use_pyth_price",
-                new ArrayList<>(),
-                Arrays.asList(Argument.ofInput(2), Argument.ofInput(6))
-        );
+    // 6. Build PTB update price transaction
+    ProgrammableTransaction programmableTx = pythClient.updatePrice(feedId, PythNetwork.TESTNET);
 
-        Command useUpdateMoveCall = new Command.MoveCall(moveCall);
-        programmableTx.addCommand(useUpdateMoveCall);
+    // 7. Add custom Move call (optional)
+    ProgrammableMoveCall moveCall = new ProgrammableMoveCall(
+            "0xb5f4bf7d29a8e82eb5de521cf556f1953c9fdd3d73e7f371a156c6e1ee64f24b",
+            "main",
+            "use_pyth_price",
+            new ArrayList<>(),
+            Arrays.asList(Argument.ofInput(2), Argument.ofInput(6))
+    );
 
-        // 8. Prepare Gas data (actual Gas object needed here)
-        SuiObjectRef gasObject = new SuiObjectRef(
-                "0x0b50fe6d7b86730f0f8d2e389d22d63c30a73a1034720a8a43bb5e322a9588e1",
-                500452832L,
-                "FZSJfo8uZMLjeppm4XSd1peiEnox8FYxMxPbZVmuUjqw"
-        );
+    Command useUpdateMoveCall = new Command.MoveCall(moveCall);
+    programmableTx.addCommand(useUpdateMoveCall);
 
-        GasData gasData = new GasData(
-                Arrays.asList(gasObject),
-                keyPair.address(),
-                1000L,
-                10000000L
-        );
+    // 8. Prepare Gas data (actual Gas object needed here)
+    SuiObjectRef gasObject = new SuiObjectRef(
+            "0x0b50fe6d7b86730f0f8d2e389d22d63c30a73a1034720a8a43bb5e322a9588e1",
+            500452832L,
+            "FZSJfo8uZMLjeppm4XSd1peiEnox8FYxMxPbZVmuUjqw"
+    );
 
-        // 9. Serialize transaction (using local BCS encoding)
-        String transactionDataBase64 = TransactionBuilder.serializeTransactionBytes(
-                programmableTx,
-                keyPair.address(),
-                gasData
-        );
+    GasData gasData = new GasData(
+            Arrays.asList(gasObject),
+            keyPair.address(),
+            1000L,
+            BigInteger.valueOf(10000000L)
+    );
 
-        System.out.println("Serialized transaction data: " + transactionDataBase64);
+    // 9. Serialize transaction (using local BCS encoding)
+    String transactionDataBase64 = TransactionBuilder.serializeTransactionBytes(
+            programmableTx,
+            keyPair.address(),
+            gasData
+    );
 
-        // 10. Execute transaction (optional, requires actual Gas object)
-        // suiClient.executeTransactionBlock(transactionDataBase64, keyPair);
+    System.out.println("Serialized transaction data: " + transactionDataBase64);
 
-        System.out.println("Pyth price update PTB transaction construction completed!");
-    }
+    // 10. Execute transaction (optional, requires actual Gas object)
+    // suiClient.executeTransactionBlock(transactionDataBase64, keyPair);
+
+    System.out.println("Pyth price update PTB transaction construction completed!");
+  }
 }
 ```
 
