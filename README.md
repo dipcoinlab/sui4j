@@ -36,14 +36,43 @@ Sui4J is a Java SDK designed specifically for the Sui blockchain, providing comp
 <dependency>
     <groupId>io.dipcoin</groupId>
     <artifactId>sui4j</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
 </dependency>
+```
+
+It already meets basic on-chain requirements, but it is still in the refinement stage with frequent additions and modifications. Therefore, only the SNAPSHOT version has been published, requiring the addition of a repository in `pom.xml` or `settings.xml`.
+
+```xml
+<repositories>
+    <repository>
+        <id>sonatype-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases>
+            <enabled>false</enabled>
+        </releases>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+</repositories>
 ```
 
 ### 🎯 Gradle Dependency
 
 ```gradle
-implementation 'com.dipcoin:sui4j:1.0.0'
+implementation 'io.dipcoin:sui4j:1.0.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+
+    // Sonatype snapshots
+    maven {
+        url "https://central.sonatype.com/repository/maven-snapshots/"
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
+}
 ```
 
 ## 🎯 Basic Usage
