@@ -23,9 +23,7 @@ package io.dipcoin.sui.protocol;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import io.dipcoin.sui.model.Response;
 import io.dipcoin.sui.model.move.SuiMoveNormalizedModule;
 import io.dipcoin.sui.model.move.kind.*;
 import io.dipcoin.sui.model.object.kind.InputObjectKind;
@@ -55,7 +53,6 @@ public class ObjectMapperFactory {
 
     // Use double-checked locking to ensure thread safety
     private static volatile ObjectMapper DEFAULT_OBJECT_MAPPER;
-    private static volatile ObjectMapper RAW_RESPONSE_MAPPER;
 
     // Deserializer cache (Key: transaction type kind, Value: deserializer instance)
     private static final ConcurrentMap<String, JsonDeserializer<?>> DESERIALIZER_CACHE =
@@ -70,36 +67,21 @@ public class ObjectMapperFactory {
         if (DEFAULT_OBJECT_MAPPER == null) {
             synchronized (ObjectMapperFactory.class) {
                 if (DEFAULT_OBJECT_MAPPER == null) {
-                    DEFAULT_OBJECT_MAPPER = createBaseMapper(false);
+                    DEFAULT_OBJECT_MAPPER = createBaseMapper();
                 }
             }
         }
     }
 
     public static ObjectMapper getObjectMapper() {
-        return getObjectMapper(false);
-    }
-
-    public static ObjectMapper getObjectMapper(boolean shouldIncludeRawResponses) {
-        if (!shouldIncludeRawResponses) {
-            return DEFAULT_OBJECT_MAPPER;
-        }
-
-        if (RAW_RESPONSE_MAPPER == null) {
-            synchronized (ObjectMapperFactory.class) {
-                if (RAW_RESPONSE_MAPPER == null) {
-                    RAW_RESPONSE_MAPPER = createBaseMapper(true);
-                }
-            }
-        }
-        return RAW_RESPONSE_MAPPER;
+        return DEFAULT_OBJECT_MAPPER;
     }
 
     public static ObjectReader getObjectReader() {
         return DEFAULT_OBJECT_MAPPER.reader();
     }
 
-    private static ObjectMapper createBaseMapper(boolean includeRawResponses) {
+    private static ObjectMapper createBaseMapper() {
         ObjectMapper mapper = new ObjectMapper();
 
         // Basic configuration
@@ -144,13 +126,6 @@ public class ObjectMapperFactory {
 //                .addDeserializer(ObjectOwner.class, new ObjectOwnerDeserializer())
         );
 
-        // Raw response handling (preserving original logic)
-        if (includeRawResponses) {
-            SimpleModule rawModule = new SimpleModule();
-            rawModule.setDeserializerModifier(new RawResponseModifier());
-            mapper.registerModule(rawModule);
-        }
-
         // Performance optimization configuration
         mapper.enable(JsonParser.Feature.USE_FAST_DOUBLE_PARSER)
                 .enable(JsonParser.Feature.USE_FAST_BIG_NUMBER_PARSER)
@@ -159,20 +134,4 @@ public class ObjectMapperFactory {
         return mapper;
     }
 
-    /**
-     * Raw response handling modifier (preserving original logic)
-     */
-    private static class RawResponseModifier extends BeanDeserializerModifier {
-        @Override
-        public JsonDeserializer<?> modifyDeserializer(
-                DeserializationConfig config,
-                BeanDescription beanDesc,
-                JsonDeserializer<?> deserializer
-        ) {
-            if (Response.class.isAssignableFrom(beanDesc.getBeanClass())) {
-                return new RawResponseDeserializer(deserializer);
-            }
-            return deserializer;
-        }
-    }
 }

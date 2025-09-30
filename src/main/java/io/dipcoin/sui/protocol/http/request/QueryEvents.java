@@ -11,13 +11,26 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.filter;
+package io.dipcoin.sui.protocol.http.request;
+
+import io.dipcoin.sui.model.event.EventId;
+import io.dipcoin.sui.model.filter.EventFilter;
+import lombok.Data;
 
 /**
  * @author : Same
- * @datetime : 2025/6/25 21:46
- * @Description : sui filter
+ * @datetime : 2025/9/25 12:16
+ * @Description :
  */
-public class SuiFilter {
+@Data
+public class QueryEvents {
+
+    private EventFilter query;
+
+    private EventId cursor;
+
+    private Long limit;
+
+    private Boolean descendingOrder;
 
 }

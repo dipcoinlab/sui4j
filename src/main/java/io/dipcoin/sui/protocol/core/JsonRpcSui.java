@@ -22,16 +22,18 @@ package io.dipcoin.sui.protocol.core;
 
 import io.dipcoin.sui.model.Request;
 import io.dipcoin.sui.model.event.Event;
-import io.dipcoin.sui.model.filter.SuiFilter;
 import io.dipcoin.sui.model.read.ChainIdentifier;
 import io.dipcoin.sui.model.transaction.Transaction;
 import io.dipcoin.sui.protocol.SuiClient;
 import io.dipcoin.sui.protocol.SuiService;
 import io.dipcoin.sui.protocol.http.request.*;
 import io.dipcoin.sui.protocol.http.response.*;
-import io.dipcoin.sui.protocol.rx.JsonRpcSuiRx;
+import io.dipcoin.sui.protocol.rx.AdaptivePollingManager;
+import io.dipcoin.sui.protocol.rx.Callback;
+import io.dipcoin.sui.protocol.rx.EventQueryTask;
+import io.dipcoin.sui.protocol.rx.JsonRpcSuiPolling;
+import io.dipcoin.sui.protocol.rx.model.AdaptiveConfig;
 import io.dipcoin.sui.util.Async;
-import io.reactivex.Flowable;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -45,13 +47,14 @@ import java.util.concurrent.ScheduledExecutorService;
  * @Description : JSON-RPC 2.0 factory implementation.
  */
 public class JsonRpcSui implements SuiClient {
-    
+
     public static final int DEFAULT_BLOCK_TIME = 5 * 100;
 //    private static final BigInteger MIN_BLOB_BASE_FEE = new BigInteger("1");
 //    private static final BigInteger BLOB_BASE_FEE_UPDATE_FRACTION = new BigInteger("3338477");
 
     protected final SuiService suiService;
-    private final JsonRpcSuiRx suiRx;
+    private final JsonRpcSuiPolling jsonRpcSuiPolling;
+    private final AdaptivePollingManager adaptivePollingManager;
     private final long blockTime;
     private final ScheduledExecutorService scheduledExecutorService;
 
@@ -64,7 +67,8 @@ public class JsonRpcSui implements SuiClient {
             long pollingInterval,
             ScheduledExecutorService scheduledExecutorService) {
         this.suiService = suiService;
-        this.suiRx = new JsonRpcSuiRx(this, scheduledExecutorService);
+        this.jsonRpcSuiPolling = new JsonRpcSuiPolling(scheduledExecutorService);
+        this.adaptivePollingManager = new AdaptivePollingManager(jsonRpcSuiPolling);
         this.blockTime = pollingInterval;
         this.scheduledExecutorService = scheduledExecutorService;
     }
@@ -87,6 +91,15 @@ public class JsonRpcSui implements SuiClient {
                 Arrays.asList(request.getAddress(), request.getQuery(), request.getCursor(), request.getLimit()),
                 suiService,
                 PageForSuiObjectResponseAndObjectIdWrapper.class);
+    }
+
+    @Override
+    public Request<?, PageForEventAndEventIdWrapper> queryEvents(QueryEvents request) {
+        return new Request<>(
+                "suix_queryEvents",
+                Arrays.asList(request.getQuery(), request.getCursor(), request.getLimit(), request.getDescendingOrder()),
+                suiService,
+                PageForEventAndEventIdWrapper.class);
     }
 
     // --------------------- Extended API end ---------------------
@@ -265,6 +278,8 @@ public class JsonRpcSui implements SuiClient {
 
     // --------------------- Write API end ---------------------
 
+    // --------------------- polling API start ---------------------
+
     @Override
     public void shutdown() {
         scheduledExecutorService.shutdown();
@@ -276,9 +291,29 @@ public class JsonRpcSui implements SuiClient {
     }
 
     @Override
-    public Flowable<Event> suiEventFlowable(SuiFilter suiFilter) {
-        return null;
+    public String suiEventSubscribe(QueryEvents request, Callback<List<Event>> callback) {
+        return suiEventSubscribe(request, callback, blockTime);
     }
+
+    @Override
+    public String suiEventSubscribe(QueryEvents request, Callback<List<Event>> callback, long interval) {
+        EventQueryTask eventTask = new EventQueryTask(this, request, callback);
+        String taskId = "event-query" + eventTask.hashCode();
+        adaptivePollingManager.registerAdaptiveTask(
+                taskId,
+                eventTask,
+                interval,
+                AdaptiveConfig.defaults()
+        );
+        return taskId;
+    }
+
+    @Override
+    public boolean unSubscribe(String taskId) {
+        return jsonRpcSuiPolling.stopTask(taskId);
+    }
+
+    // --------------------- polling API end ---------------------
 
     @Override
     public void close() throws Exception {

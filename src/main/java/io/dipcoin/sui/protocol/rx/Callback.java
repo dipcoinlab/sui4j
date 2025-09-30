@@ -11,21 +11,25 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.object;
-
-import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
-import lombok.Data;
+package io.dipcoin.sui.protocol.rx;
 
 /**
  * @author : Same
- * @datetime : 2025/7/24 00:06
- * @Description : ObjectResponseQuery request
+ * @datetime : 2025/9/26 18:30
+ * @Description : Callback interface
  */
-@Data
-public class ObjectResponseQuery {
+public interface Callback<T> {
 
-    private SuiObjectDataFilter filter;
+    /**
+     * Event handling
+     * @param value
+     */
+    void onEvent(T value);
 
-    private ObjectDataOptions options = ObjectDataOptions.allTrue();
+    /**
+     * Error handling
+     * @param throwable
+     */
+    void onError(Throwable throwable);
 
 }

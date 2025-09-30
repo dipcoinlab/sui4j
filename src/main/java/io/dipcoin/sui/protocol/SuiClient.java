@@ -22,7 +22,7 @@ package io.dipcoin.sui.protocol;
 
 import io.dipcoin.sui.protocol.core.JsonRpcSui;
 import io.dipcoin.sui.protocol.core.Sui;
-import io.dipcoin.sui.protocol.rx.SuiRx;
+import io.dipcoin.sui.protocol.rx.SuiPolling;
 
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -31,7 +31,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * @datetime : 2025/6/25 21:37
  * @Description : JSON-RPC Request object building factory.
  */
-public interface SuiClient extends Sui, SuiRx, AutoCloseable {
+public interface SuiClient extends Sui, SuiPolling, AutoCloseable {
 
     /**
      * Construct a new SuiClient instance.

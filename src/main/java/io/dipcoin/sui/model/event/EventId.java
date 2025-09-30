@@ -14,7 +14,9 @@
 package io.dipcoin.sui.model.event;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigInteger;
 
@@ -23,6 +25,8 @@ import java.math.BigInteger;
  * @datetime : 2025/6/28 13:02
  * @Description : EventId response
  */
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EventId {

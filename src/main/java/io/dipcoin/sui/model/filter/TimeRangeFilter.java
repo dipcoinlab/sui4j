@@ -11,21 +11,24 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.object;
+package io.dipcoin.sui.model.filter;
 
-import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
 import lombok.Data;
 
 /**
  * @author : Same
- * @datetime : 2025/7/24 00:06
- * @Description : ObjectResponseQuery request
+ * @datetime : 2025/9/26 15:43
+ * @Description :
  */
 @Data
-public class ObjectResponseQuery {
+public class TimeRangeFilter {
 
-    private SuiObjectDataFilter filter;
+    private Long startTime;
 
-    private ObjectDataOptions options = ObjectDataOptions.allTrue();
+    private Long endTime;
 
+    public TimeRangeFilter(Long startTime, Long endTime) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
 }

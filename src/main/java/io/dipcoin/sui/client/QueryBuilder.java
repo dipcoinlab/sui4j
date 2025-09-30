@@ -14,6 +14,7 @@
 package io.dipcoin.sui.client;
 
 import io.dipcoin.sui.model.Request;
+import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
 import io.dipcoin.sui.model.move.kind.MoveValue;
 import io.dipcoin.sui.model.move.kind.data.MoveObject;
 import io.dipcoin.sui.model.move.kind.struct.MoveStructMap;

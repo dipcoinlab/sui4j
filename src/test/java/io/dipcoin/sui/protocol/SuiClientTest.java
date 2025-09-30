@@ -24,6 +24,8 @@ import io.dipcoin.sui.crypto.SuiKeyPair;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
 import io.dipcoin.sui.model.Request;
 import io.dipcoin.sui.model.extended.DynamicFieldName;
+import io.dipcoin.sui.model.filter.MoveModuleFilter;
+import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
 import io.dipcoin.sui.model.governance.SuiSystemStateSummary;
 import io.dipcoin.sui.model.move.SuiMoveNormalizedFunction;
 import io.dipcoin.sui.model.move.SuiMoveNormalizedModule;
@@ -33,16 +35,16 @@ import io.dipcoin.sui.model.move.kind.MoveValue;
 import io.dipcoin.sui.model.move.kind.data.MoveObject;
 import io.dipcoin.sui.model.move.kind.struct.MoveStructMap;
 import io.dipcoin.sui.model.move.kind.struct.MoveStructObject;
-import io.dipcoin.sui.model.object.*;
-import io.dipcoin.sui.model.object.*;
+import io.dipcoin.sui.model.object.ObjectDataOptions;
+import io.dipcoin.sui.model.object.ObjectResponseQuery;
+import io.dipcoin.sui.model.object.PageForSuiObjectResponseAndObjectId;
+import io.dipcoin.sui.model.object.SuiObjectResponse;
 import io.dipcoin.sui.model.read.ChainIdentifier;
 import io.dipcoin.sui.model.transaction.Transaction;
 import io.dipcoin.sui.model.transaction.TransactionBlockBytes;
 import io.dipcoin.sui.model.zk.ZkLoginIntentScope;
 import io.dipcoin.sui.protocol.constant.SuiSystem;
 import io.dipcoin.sui.protocol.http.HttpService;
-import io.dipcoin.sui.protocol.http.request.*;
-import io.dipcoin.sui.protocol.http.response.*;
 import io.dipcoin.sui.protocol.http.request.*;
 import io.dipcoin.sui.protocol.http.response.*;
 import io.dipcoin.sui.pyth.constant.PythConfig;
@@ -150,10 +152,12 @@ public class SuiClientTest extends DeserializerTest{
 
         String suiType = "0x2::coin::Coin<0x2::sui::SUI>";
         String capType = "0x1f2788918b609959c9052a1f00c49765752acb24d99997a102903be7da18dd0d::roles::DeleveragingCap";
+        MoveModuleFilter moveModuleFilter = new MoveModuleFilter("trade", "0x1f2788918b609959c9052a1f00c49765752acb24d99997a102903be7da18dd0d");
 
         List<SuiObjectDataFilter> filters = List.of(
                 new SuiObjectDataFilter().setStructTypeFilter(suiType)
                 , new SuiObjectDataFilter().setStructTypeFilter(capType)
+                , new SuiObjectDataFilter().setMoveModuleFilter(moveModuleFilter)
         );
 
         SuiObjectDataFilter suiObjectDataFilter = new SuiObjectDataFilter();

@@ -11,21 +11,26 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.object;
+package io.dipcoin.sui.model.event;
 
-import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * @author : Same
- * @datetime : 2025/7/24 00:06
- * @Description : ObjectResponseQuery request
+ * @datetime : 2025/9/25 12:09
+ * @Description :
  */
 @Data
-public class ObjectResponseQuery {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class PageForEventAndEventId {
 
-    private SuiObjectDataFilter filter;
+    private List<Event> data;
 
-    private ObjectDataOptions options = ObjectDataOptions.allTrue();
+    private Boolean hasNextPage;
+
+    private EventId nextCursor;
 
 }

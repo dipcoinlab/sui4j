@@ -352,4 +352,18 @@ public class PureBcsTest {
         assertFalse(PureBcs.isValidPureTypeName("vector<invalid_type>"));
         assertFalse(PureBcs.isValidPureTypeName("option<invalid_type>"));
     }
+
+    @Test
+    void testVectorU8() {
+        log.info("Testing vector u8...");
+
+        int[] a = new int[]{187,95,242,110,71,163,166,204,126,194,252,225,219,153,108,42,20,83,0,237,197,172,170,190,67,191,159,247,197,221,93,50};
+
+        // Process byte array
+        StringBuilder hexString = new StringBuilder();
+        for (int i = 0; i < a.length; i++) {
+            hexString.append(String.format("%02x", a[i] & 0xFF));
+        }
+        log.info("0x{}",hexString);
+    }
 } 

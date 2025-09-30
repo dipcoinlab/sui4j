@@ -40,8 +40,8 @@ public abstract class Service implements SuiService{
 
     protected final ObjectMapper objectMapper;
 
-    public Service(boolean includeRawResponses) {
-        objectMapper = ObjectMapperFactory.getObjectMapper(includeRawResponses);
+    public Service() {
+        objectMapper = ObjectMapperFactory.getObjectMapper();
     }
 
     protected abstract InputStream performIO(String payload) throws IOException;

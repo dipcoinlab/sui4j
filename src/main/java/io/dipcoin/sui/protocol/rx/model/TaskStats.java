@@ -11,21 +11,18 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.object;
-
-import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
-import lombok.Data;
+package io.dipcoin.sui.protocol.rx.model;
 
 /**
  * @author : Same
- * @datetime : 2025/7/24 00:06
- * @Description : ObjectResponseQuery request
+ * @datetime : 2025/9/26 18:33
+ * @Description : Task statistics
  */
-@Data
-public class ObjectResponseQuery {
+public record TaskStats(long successCount, long errorCount, long lastExecutionTime) {
 
-    private SuiObjectDataFilter filter;
-
-    private ObjectDataOptions options = ObjectDataOptions.allTrue();
+    public double getSuccessRate() {
+        long total = successCount + errorCount;
+        return total > 0 ? (double) successCount / total * 100 : 100.0;
+    }
 
 }

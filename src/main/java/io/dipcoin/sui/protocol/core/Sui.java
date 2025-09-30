@@ -49,6 +49,13 @@ public interface Sui {
      */
     Request<?, PageForSuiObjectResponseAndObjectIdWrapper> getOwnedObjects(GetOwnedObjects request);
 
+    /**
+     * Return list of events for a specified query criteria
+     * @param request
+     * @return
+     */
+    Request<?, PageForEventAndEventIdWrapper> queryEvents(QueryEvents request);
+
     // --------------------- Extended API end ---------------------
 
     // --------------------- Governance Read API start ---------------------

@@ -11,21 +11,21 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.object;
-
-import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
-import lombok.Data;
+package io.dipcoin.sui.protocol.exceptions;
 
 /**
  * @author : Same
- * @datetime : 2025/7/24 00:06
- * @Description : ObjectResponseQuery request
+ * @datetime : 2025/9/25 19:49
+ * @Description :
  */
-@Data
-public class ObjectResponseQuery {
+public class FilterException extends RuntimeException {
 
-    private SuiObjectDataFilter filter;
+    public FilterException(String message) {
+        super(message);
+    }
 
-    private ObjectDataOptions options = ObjectDataOptions.allTrue();
+    public FilterException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
 }

@@ -54,34 +54,18 @@ public class HttpService extends Service {
 
     private HashMap<String, String> headers = new HashMap<>();
 
-    public HttpService(String url, OkHttpClient httpClient, boolean includeRawResponses) {
-        super(includeRawResponses);
+    public HttpService(String url, OkHttpClient httpClient) {
+        super();
         this.url = url;
         this.httpClient = httpClient;
-    }
-
-    public HttpService(OkHttpClient httpClient, boolean includeRawResponses) {
-        this(DEFAULT_URL, httpClient, includeRawResponses);
-    }
-
-    public HttpService(String url, OkHttpClient httpClient) {
-        this(url, httpClient, false);
-    }
-
-    public HttpService(String url) {
-        this(url, createOkHttpClient());
-    }
-
-    public HttpService(String url, boolean includeRawResponse) {
-        this(url, createOkHttpClient(), includeRawResponse);
     }
 
     public HttpService(OkHttpClient httpClient) {
         this(DEFAULT_URL, httpClient);
     }
 
-    public HttpService(boolean includeRawResponse) {
-        this(DEFAULT_URL, includeRawResponse);
+    public HttpService(String url) {
+        this(url, createOkHttpClient());
     }
 
     public HttpService() {

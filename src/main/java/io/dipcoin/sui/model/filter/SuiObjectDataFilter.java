@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package io.dipcoin.sui.model.object;
+package io.dipcoin.sui.model.filter;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -62,17 +62,5 @@ public class SuiObjectDataFilter {
 
     @JsonProperty("Version")
     private Long versionFilter;
-
-    @Data
-    public static class MoveModuleFilter {
-        private String module;
-        private String packageId;
-
-        public MoveModuleFilter(String module, String packageId) {
-            this.module = module;
-            this.packageId = packageId;
-        }
-
-    }
 
 }
