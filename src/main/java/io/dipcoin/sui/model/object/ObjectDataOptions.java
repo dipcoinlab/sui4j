@@ -104,6 +104,22 @@ public class ObjectDataOptions {
     }
 
     /**
+     * Only content and type to true
+     * @return
+     */
+    public static ObjectDataOptions contentAbdTypeTrue() {
+        ObjectDataOptions options = new ObjectDataOptions();
+        options.setShowBcs(false);
+        options.setShowContent(true);
+        options.setShowDisplay(false);
+        options.setShowOwner(false);
+        options.setShowPreviousTransaction(false);
+        options.setShowStorageRebate(false);
+        options.setShowType(true);
+        return options;
+    }
+
+    /**
      * Only owner to true
      * @return
      */
