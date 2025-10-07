@@ -23,6 +23,7 @@ import io.dipcoin.sui.crypto.Ed25519KeyPair;
 import io.dipcoin.sui.crypto.SuiKeyPair;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
 import io.dipcoin.sui.model.Request;
+import io.dipcoin.sui.model.coin.PageForCoinAndString;
 import io.dipcoin.sui.model.extended.DynamicFieldName;
 import io.dipcoin.sui.model.filter.MoveModuleFilter;
 import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
@@ -99,6 +100,26 @@ public class SuiClientTest extends DeserializerTest{
         this.pythClient = new PythClient(suiClient);
     }
 
+    // --------------------- Query API ---------------------
+
+    @Test
+    @Tag("suite")
+    void testGetCoins() throws IOException {
+        GetCoins data = new GetCoins();
+        data.setOwner("0x32c42fef490b188931789797feb1125034ec8118a5d15ef927b9b60e07e2ca1e");
+        data.setCoinType("0x2::sui::SUI");
+        data.setCursor(null);
+        data.setLimit(null);
+        Request<?, PageForCoinAndStringWrapper> request = suiClient.getCoins(data);
+        PageForCoinAndStringWrapper send = request.send();
+        PageForCoinAndString result = send.getResult();
+        log.info("testGetCoins result: {}", result);
+
+        // verify result type
+        assertThat(result)
+                .isInstanceOf(PageForCoinAndString.class);
+    }
+
     // --------------------- Extended API ---------------------
 
     @Test
@@ -138,6 +159,32 @@ public class SuiClientTest extends DeserializerTest{
         MoveStructMap fields = (MoveStructMap) content.getFields();
         MoveValue value = fields.getValues().get("value");
         log.info("SuiObjectResponse feedObjectId result2 value : {}", value.getValue());
+
+        // verify result type
+        assertThat(result)
+                .isInstanceOf(SuiObjectResponse.class);
+    }
+
+    @Test
+    @Tag("suite")
+    void testGetDynamicFieldObject2() throws IOException {
+        String parentId = "0x52523bbaac35485a1e79c9b46f6b8f53e98ebc17b317695622cb37dbbab46b67";
+
+        // get feedObjectId
+        GetDynamicFieldObject data = new GetDynamicFieldObject();
+        data.setParentObjectId(parentId);
+        data.setName(new DynamicFieldName("0x1::string::String",
+                "LP-5c68f3d2ebfd711454da300d6abf3c7254dc9333cd138cdc68e158ebffd24483::coins::WSOL-5c68f3d2ebfd711454da300d6abf3c7254dc9333cd138cdc68e158ebffd24483::coins::CETUS"));
+
+        // execution test
+        Request<?, SuiObjectResponseWrapper> request = suiClient.getDynamicFieldObject(data);
+        SuiObjectResponseWrapper response = request.send();
+        SuiObjectResponse result = response.getResult();
+        log.info("SuiObjectResponse feedObjectId result: {}", result);
+        MoveObject content = (MoveObject) result.getData().getContent();
+        MoveStructMap fields = (MoveStructMap) content.getFields();
+        MoveValue value = fields.getValues().get("value");
+        log.info("SuiObjectResponse feedObjectId result value : {}", value.getValue());
 
         // verify result type
         assertThat(result)

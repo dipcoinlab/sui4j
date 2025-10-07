@@ -33,6 +33,17 @@ import io.dipcoin.sui.protocol.http.response.*;
  */
 public interface Sui {
 
+    // --------------------- Coin Query API start ---------------------
+
+    /**
+     * Return all Coin<coin_type> objects owned by an address
+     * @param request
+     * @return
+     */
+    Request<?, PageForCoinAndStringWrapper> getCoins(GetCoins request);
+
+    // --------------------- Coin Query API end ---------------------
+
     // --------------------- Extended API start ---------------------
 
     /**

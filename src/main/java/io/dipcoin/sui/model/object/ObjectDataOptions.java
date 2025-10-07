@@ -107,7 +107,7 @@ public class ObjectDataOptions {
      * Only content and type to true
      * @return
      */
-    public static ObjectDataOptions contentAbdTypeTrue() {
+    public static ObjectDataOptions contentAndTypeTrue() {
         ObjectDataOptions options = new ObjectDataOptions();
         options.setShowBcs(false);
         options.setShowContent(true);

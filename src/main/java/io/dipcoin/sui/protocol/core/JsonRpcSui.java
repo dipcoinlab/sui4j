@@ -73,6 +73,19 @@ public class JsonRpcSui implements SuiClient {
         this.scheduledExecutorService = scheduledExecutorService;
     }
 
+    // --------------------- Coin Query API start ---------------------
+
+    @Override
+    public Request<?, PageForCoinAndStringWrapper> getCoins(GetCoins request) {
+        return new Request<>(
+                "suix_getCoins",
+                Arrays.asList(request.getOwner(), request.getCoinType(), request.getCursor(), request.getLimit()),
+                suiService,
+                PageForCoinAndStringWrapper.class);
+    }
+
+    // --------------------- Coin Query API end ---------------------
+
     // --------------------- Extended API start ---------------------
 
     @Override
@@ -191,7 +204,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, SuiObjectResponseWrapper> getObject(GetObject request) {
         return new Request<>(
                 "sui_getObject",
-                List.of(request.getObjectId(), request.getOptions()),
+                Arrays.asList(request.getObjectId(), request.getOptions()),
                 suiService,
                 SuiObjectResponseWrapper.class);
     }
@@ -200,7 +213,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, SuiMultiObjectResponseWrapper> multiGetObjects(MultiGetObjects request) {
         return new Request<>(
                 "sui_multiGetObjects",
-                List.of(request.getObjectIds(), request.getOptions()),
+                Arrays.asList(request.getObjectIds(), request.getOptions()),
                 suiService,
                 SuiMultiObjectResponseWrapper.class);
     }
@@ -222,7 +235,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, TransactionBlockBytesWrapper> batchTransaction(UnsafeBatchTransaction request) {
         return new Request<>(
                 "unsafe_batchTransaction",
-                List.of(request.getSigner(), request.getSingleTransactionParams(), request.getGas(), request.getGasBudget(), request.getExecutionMode()),
+                Arrays.asList(request.getSigner(), request.getSingleTransactionParams(), request.getGas(), request.getGasBudget(), request.getExecutionMode()),
                 suiService,
                 TransactionBlockBytesWrapper.class);
     }
@@ -231,7 +244,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, TransactionBlockBytesWrapper> moveCall(UnsafeMoveCall request) {
         return new Request<>(
                 "unsafe_moveCall",
-                List.of(request.getSigner(), request.getPackageObjectId(), request.getModule(), request.getFunction(), request.getTypeArguments(), request.getArguments(), request.getGas(), request.getGasBudget(), request.getExecutionMode()),
+                Arrays.asList(request.getSigner(), request.getPackageObjectId(), request.getModule(), request.getFunction(), request.getTypeArguments(), request.getArguments(), request.getGas(), request.getGasBudget(), request.getExecutionMode()),
                 suiService,
                 TransactionBlockBytesWrapper.class);
     }
@@ -240,7 +253,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, TransactionBlockBytesWrapper> pay(UnsafePay request) {
         return new Request<>(
                 "unsafe_pay",
-                List.of(request.getSigner(), request.getInputCoins(), request.getRecipients(), request.getAmounts(), request.getGas(), request.getGasBudget()),
+                Arrays.asList(request.getSigner(), request.getInputCoins(), request.getRecipients(), request.getAmounts(), request.getGas(), request.getGasBudget()),
                 suiService,
                 TransactionBlockBytesWrapper.class);
     }
@@ -249,7 +262,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, TransactionBlockBytesWrapper> paySui(UnsafePaySui request) {
         return new Request<>(
                 "unsafe_paySui",
-                List.of(request.getSigner(), request.getInputCoins(), request.getRecipients(), request.getAmounts(), request.getGasBudget()),
+                Arrays.asList(request.getSigner(), request.getInputCoins(), request.getRecipients(), request.getAmounts(), request.getGasBudget()),
                 suiService,
                 TransactionBlockBytesWrapper.class);
     }
@@ -258,7 +271,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, TransactionBlockBytesWrapper> transferObject(UnsafeTransferObject request) {
         return new Request<>(
                 "unsafe_transferObject",
-                List.of(request.getSigner(), request.getObjectId(), request.getGas(), request.getGasBudget(), request.getRecipient()),
+                Arrays.asList(request.getSigner(), request.getObjectId(), request.getGas(), request.getGasBudget(), request.getRecipient()),
                 suiService,
                 TransactionBlockBytesWrapper.class);
     }
@@ -271,7 +284,7 @@ public class JsonRpcSui implements SuiClient {
     public Request<?, SuiTransactionBlockResponseWrapper> executeTransactionBlock(Transaction request) {
         return new Request<>(
                 "sui_executeTransactionBlock",
-                List.of(request.getTxBytes(), request.getSignatures(), request.getOptions(), request.getRequestType()),
+                Arrays.asList(request.getTxBytes(), request.getSignatures(), request.getOptions(), request.getRequestType()),
                 suiService,
                 SuiTransactionBlockResponseWrapper.class);
     }
