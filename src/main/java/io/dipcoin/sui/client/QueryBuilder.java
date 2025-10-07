@@ -14,6 +14,8 @@
 package io.dipcoin.sui.client;
 
 import io.dipcoin.sui.model.Request;
+import io.dipcoin.sui.model.coin.Coin;
+import io.dipcoin.sui.model.coin.PageForCoinAndString;
 import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
 import io.dipcoin.sui.model.move.kind.MoveValue;
 import io.dipcoin.sui.model.move.kind.data.MoveObject;
@@ -21,8 +23,10 @@ import io.dipcoin.sui.model.move.kind.struct.MoveStructMap;
 import io.dipcoin.sui.model.object.*;
 import io.dipcoin.sui.protocol.SuiClient;
 import io.dipcoin.sui.protocol.exceptions.RpcRequestFailedException;
+import io.dipcoin.sui.protocol.http.request.GetCoins;
 import io.dipcoin.sui.protocol.http.request.GetObject;
 import io.dipcoin.sui.protocol.http.request.GetOwnedObjects;
+import io.dipcoin.sui.protocol.http.response.PageForCoinAndStringWrapper;
 import io.dipcoin.sui.protocol.http.response.PageForSuiObjectResponseAndObjectIdWrapper;
 import io.dipcoin.sui.protocol.http.response.SuiObjectResponseWrapper;
 
@@ -206,6 +210,30 @@ public class QueryBuilder {
             throw new RpcRequestFailedException("Get objectData failed! objectId = " + objectId, e);
         }
         SuiObjectResponse result = response.getResult();
+        return result.getData();
+    }
+
+    /**
+     * Get coins
+     * @param suiClient
+     * @param address
+     * @param type
+     * @return
+     */
+    public static List<Coin> getCoins(SuiClient suiClient, String address, String type) {
+        // Get object
+        GetCoins data = new GetCoins();
+        data.setOwner(address);
+        data.setCoinType(type);
+
+        Request<?, PageForCoinAndStringWrapper> request = suiClient.getCoins(data);
+        PageForCoinAndStringWrapper response;
+        try {
+            response = request.send();
+        } catch (IOException e) {
+            throw new RpcRequestFailedException("Get coins failed! address = " + address + ", type = " + type, e);
+        }
+        PageForCoinAndString result = response.getResult();
         return result.getData();
     }
 

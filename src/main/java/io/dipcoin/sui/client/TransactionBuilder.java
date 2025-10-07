@@ -331,6 +331,52 @@ public class TransactionBuilder {
      * @param suiClient
      * @param programmableTx
      * @param suiKeyPair
+     * @param gasData
+     * @return
+     * @throws IOException
+     */
+    public static SuiTransactionBlockResponse sendTransaction(SuiClient suiClient, ProgrammableTransaction programmableTx, SuiKeyPair suiKeyPair, GasData gasData) throws IOException {
+        String address = suiKeyPair.address();
+        String txBytes;
+        try {
+            txBytes = TransactionBuilder.serializeTransactionBytes(programmableTx, address, gasData);
+        } catch (IOException e) {
+            throw new RpcRequestFailedException("Send tx failed! Cause : " + e.getMessage());
+        }
+        Transaction transaction = TransactionBuilder.buildTransaction(txBytes, suiKeyPair);
+        Request<?, SuiTransactionBlockResponseWrapper> tx = suiClient.executeTransactionBlock(transaction);
+        SuiTransactionBlockResponseWrapper send = tx.send();
+        return send.getResult();
+    }
+
+    /**
+     * Send tx with custom return parameters
+     * @param suiClient
+     * @param programmableTx
+     * @param suiKeyPair
+     * @param gasData
+     * @return
+     * @throws IOException
+     */
+    public static SuiTransactionBlockResponse sendTransaction(SuiClient suiClient, ProgrammableTransaction programmableTx, SuiKeyPair suiKeyPair, GasData gasData, TransactionBlockResponseOptions options) throws IOException {
+        String address = suiKeyPair.address();
+        String txBytes;
+        try {
+            txBytes = TransactionBuilder.serializeTransactionBytes(programmableTx, address, gasData);
+        } catch (IOException e) {
+            throw new RpcRequestFailedException("Send tx failed! Cause : " + e.getMessage());
+        }
+        Transaction transaction = TransactionBuilder.buildTransaction(txBytes, suiKeyPair, options);
+        Request<?, SuiTransactionBlockResponseWrapper> tx = suiClient.executeTransactionBlock(transaction);
+        SuiTransactionBlockResponseWrapper send = tx.send();
+        return send.getResult();
+    }
+
+    /**
+     * Send tx with custom return parameters
+     * @param suiClient
+     * @param programmableTx
+     * @param suiKeyPair
      * @param gasPrice
      * @param gasBudget
      * @return
