@@ -76,7 +76,7 @@ public class JsonRpcSuiPolling implements AutoCloseable{
      */
     public <T> void startTask(String taskId, PollingTask<T> task, long intervalMs) {
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
-                () -> executeTaskSafely(taskId, task),
+                () -> executeTaskSafely(task),
                 0, intervalMs, TimeUnit.MILLISECONDS
         );
 
@@ -87,11 +87,10 @@ public class JsonRpcSuiPolling implements AutoCloseable{
     /**
      * Execute task safely (with exception handling).
      */
-    private void executeTaskSafely(String taskId, PollingTask<?> task) {
+    private void executeTaskSafely(PollingTask<?> task) {
         try {
             task.execute();
         } catch (Exception e) {
-            log.error("Polling task {} failed", taskId, e);
             // Retry or alert logic can be added.
             task.onError(e);
         }

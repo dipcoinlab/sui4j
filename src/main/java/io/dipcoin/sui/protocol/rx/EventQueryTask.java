@@ -62,7 +62,6 @@ public class EventQueryTask extends PollingTask<List<Event>> {
             Response.Error error = resultWrapper.getError();
 
             if (error != null) {
-                log.error(error.getMessage());
                 throw new RpcRequestFailedException(error.getMessage());
             }
             PageForEventAndEventId result = resultWrapper.getResult();
@@ -121,7 +120,6 @@ public class EventQueryTask extends PollingTask<List<Event>> {
 
         } catch (Exception e) {
             errorCount.incrementAndGet();
-            log.error("Event query failed", e);
             if (callback != null) {
                 callback.onError(e);
             }
