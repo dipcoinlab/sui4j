@@ -238,6 +238,30 @@ public class QueryBuilder {
     }
 
     /**
+     * get coins
+     * @param suiClient
+     * @param address
+     * @param type
+     * @param cursor
+     * @return
+     */
+    public static PageForCoinAndString getCoins(SuiClient suiClient, String address, String type, String cursor) {
+        GetCoins data = new GetCoins();
+        data.setOwner(address);
+        data.setCoinType(type);
+        data.setCursor(cursor);
+
+        Request<?, PageForCoinAndStringWrapper> request = suiClient.getCoins(data);
+        PageForCoinAndStringWrapper response;
+        try {
+            response = request.send();
+        } catch (IOException e) {
+            throw new RpcRequestFailedException("Get coins failed! address = " + address + ", type = " + type, e);
+        }
+        return response.getResult();
+    }
+
+    /**
      * get max balance from ObjectData
      * @param suiClient
      * @param address

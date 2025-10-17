@@ -35,6 +35,7 @@ public interface SuiSystem {
     String SUI_CLOCK_OBJECT_ID = ObjectIdUtil.normalizeSuiAddress("0x6");
     String SUI_SYSTEM_MODULE_NAME = "sui_system";
     String SUI_TYPE_ARG = SUI_FRAMEWORK_ADDRESS + "::sui::SUI";
+    String SUI_TYPE = ObjectIdUtil.normalizeSuiAddress(SUI_FRAMEWORK_ADDRESS) + "::sui::SUI";
     String SUI_SYSTEM_STATE_OBJECT_ID = ObjectIdUtil.normalizeSuiAddress("0x5");
 
 }

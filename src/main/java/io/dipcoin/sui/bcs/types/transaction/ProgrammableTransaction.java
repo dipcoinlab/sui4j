@@ -65,4 +65,8 @@ public class ProgrammableTransaction {
         return this.commands;
     }
 
+    public int getCommandsSize() {
+        return this.commands.size();
+    }
+
 } 

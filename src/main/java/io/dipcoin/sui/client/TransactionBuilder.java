@@ -32,7 +32,6 @@ import io.dipcoin.sui.model.transaction.SuiTransactionBlockResponse;
 import io.dipcoin.sui.model.transaction.Transaction;
 import io.dipcoin.sui.model.transaction.TransactionBlockResponseOptions;
 import io.dipcoin.sui.protocol.SuiClient;
-import io.dipcoin.sui.protocol.constant.SuiSystem;
 import io.dipcoin.sui.protocol.exceptions.RpcRequestFailedException;
 import io.dipcoin.sui.protocol.http.response.SuiTransactionBlockResponseWrapper;
 
@@ -115,22 +114,6 @@ public class TransactionBuilder {
 
     /**
      * Build GasData single gas
-     * @param sender
-     * @param gasPrice
-     * @param gasBudget
-     * @return
-     */
-    public static GasData buildGasData(SuiClient suiClient, String sender, long gasPrice, BigInteger gasBudget) {
-        ObjectData maxBalanceObjectData = QueryBuilder.getMaxBalanceObjectData(suiClient, sender, SuiSystem.SUI);
-        if (maxBalanceObjectData == null) {
-            throw new IllegalArgumentException("This wallet has no SUI, address is " + sender);
-        }
-        SuiObjectRef suiObjectRef = new SuiObjectRef(maxBalanceObjectData.getObjectId(), maxBalanceObjectData.getVersion().longValue(), maxBalanceObjectData.getDigest());
-        return new GasData(List.of(suiObjectRef), sender, gasPrice, gasBudget);
-    }
-
-    /**
-     * Build GasData single gas
      * @param gasObjectId
      * @param version
      * @param digest
@@ -166,6 +149,33 @@ public class TransactionBuilder {
      */
     public static GasData buildGasData(List<SuiObjectRef> gasObjectRefList, String sender, long gasPrice, BigInteger gasBudget) {
         return new GasData(gasObjectRefList, sender, gasPrice, gasBudget);
+    }
+
+    /**
+     * Build GasData multiple gas
+     * @param suiClient
+     * @param sender
+     * @param gasPrice
+     * @param gasBudget
+     * @return
+     */
+    public static GasData buildGasData(SuiClient suiClient, String sender, long gasPrice, BigInteger gasBudget) {
+        List<SuiObjectRef> suiObjectRefs = CoinWithBalance.getMergeGas(suiClient, sender, gasBudget);
+        return new GasData(suiObjectRefs, sender, gasPrice, gasBudget);
+    }
+
+    /**
+     * Build GasData multiple gas
+     * @param suiClient
+     * @param sender
+     * @param gasPrice
+     * @param gasBudget
+     * @param txSuiUse
+     * @return
+     */
+    public static GasData buildGasData(SuiClient suiClient, String sender, long gasPrice, BigInteger gasBudget, BigInteger txSuiUse) {
+        List<SuiObjectRef> suiObjectRefs = CoinWithBalance.getMergeGas(suiClient, sender, gasBudget.add(txSuiUse));
+        return new GasData(suiObjectRefs, sender, gasPrice, gasBudget);
     }
 
     /**
