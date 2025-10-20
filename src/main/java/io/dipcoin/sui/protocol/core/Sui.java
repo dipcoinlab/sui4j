@@ -36,6 +36,13 @@ public interface Sui {
     // --------------------- Coin Query API start ---------------------
 
     /**
+     * Return the total coin balance for one coin type, owned by the address owner
+     * @param request
+     * @return
+     */
+    Request<?, BalanceWrapper> getBalance(GetBalance request);
+
+    /**
      * Return all Coin<coin_type> objects owned by an address
      * @param request
      * @return

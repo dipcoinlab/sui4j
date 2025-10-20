@@ -76,6 +76,15 @@ public class JsonRpcSui implements SuiClient {
     // --------------------- Coin Query API start ---------------------
 
     @Override
+    public Request<?, BalanceWrapper> getBalance(GetBalance request) {
+        return new Request<>(
+                "suix_getBalance",
+                Arrays.asList(request.getOwner(), request.getCoinType()),
+                suiService,
+                BalanceWrapper.class);
+    }
+
+    @Override
     public Request<?, PageForCoinAndStringWrapper> getCoins(GetCoins request) {
         return new Request<>(
                 "suix_getCoins",

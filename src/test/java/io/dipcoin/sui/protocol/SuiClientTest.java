@@ -23,6 +23,7 @@ import io.dipcoin.sui.crypto.Ed25519KeyPair;
 import io.dipcoin.sui.crypto.SuiKeyPair;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
 import io.dipcoin.sui.model.Request;
+import io.dipcoin.sui.model.coin.Balance;
 import io.dipcoin.sui.model.coin.PageForCoinAndString;
 import io.dipcoin.sui.model.extended.DynamicFieldName;
 import io.dipcoin.sui.model.filter.MoveModuleFilter;
@@ -101,6 +102,22 @@ public class SuiClientTest extends DeserializerTest{
     }
 
     // --------------------- Query API ---------------------
+
+    @Test
+    @Tag("suite")
+    void testGetBalance() throws IOException {
+        GetBalance data = new GetBalance();
+        data.setOwner("0x32c42fef490b188931789797feb1125034ec8118a5d15ef927b9b60e07e2ca1e");
+        data.setCoinType("0x2::sui::SUI");
+        Request<?, BalanceWrapper> request = suiClient.getBalance(data);
+        BalanceWrapper send = request.send();
+        Balance result = send.getResult();
+        log.info("testGetBalance result: {}", result);
+
+        // verify result type
+        assertThat(result)
+                .isInstanceOf(Balance.class);
+    }
 
     @Test
     @Tag("suite")
