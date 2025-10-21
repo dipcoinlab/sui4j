@@ -57,6 +57,24 @@ public class Scep256k1KeyPairTest {
     }
 
     @Test
+    void createSuiKeyDerive() {
+        // When
+        String seed = Mnemonics.generateMnemonics();
+        Secp256k1KeyPair keyPair = Secp256k1KeyPair.deriveKeypair(seed, null);
+        String address = keyPair.address();
+        System.out.println("Scep256k1    seed : " + seed);
+        System.out.println("Scep256k1 address : " + address);
+        System.out.println(" ---------------------------------------------------");
+
+        // Then
+        assertThat(keyPair).isNotNull();
+        assertThat(keyPair.getKeyPair()).isNotNull();
+        assertThat(address).isNotNull()
+                .startsWith("0x")
+                .hasSize(66);
+    }
+
+    @Test
     void constructor_shouldWorkWithValidKey() {
         // When
         Secp256k1KeyPair keyPair = new Secp256k1KeyPair(VALID_HEX_KEY);

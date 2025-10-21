@@ -13,6 +13,7 @@
 
 package io.dipcoin.sui.crypto;
 
+import io.dipcoin.sui.crypto.exceptions.MnemonicsException;
 import io.dipcoin.sui.crypto.exceptions.SigningException;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
@@ -29,6 +30,8 @@ import org.bouncycastle.util.encoders.Hex;
  * @Description : Ed25519 key pair
  */
 public class Ed25519KeyPair extends SuiKeyPair<AsymmetricCipherKeyPair> {
+
+    private final static String DEFAULT_ED25519_DERIVATION_PATH = "m/44'/784'/0'/0'/0'";
 
     public Ed25519KeyPair(byte[] privateKey) {
         Ed25519PrivateKeyParameters privateKeyParameters = new Ed25519PrivateKeyParameters(privateKey, 0);
@@ -87,27 +90,66 @@ public class Ed25519KeyPair extends SuiKeyPair<AsymmetricCipherKeyPair> {
     }
 
     /**
-     * Decode bytes sui key pair.
+     * Decode privateKey bytes sui key pair.
      *
-     * @param seed
+     * @param privateKey
      * @return
      */
-    public static Ed25519KeyPair decode(byte[] seed) {
-        Ed25519PrivateKeyParameters privateKeyParameters = new Ed25519PrivateKeyParameters(seed, 0);
+    public static Ed25519KeyPair decode(byte[] privateKey) {
+        Ed25519PrivateKeyParameters privateKeyParameters = new Ed25519PrivateKeyParameters(privateKey, 0);
         Ed25519PublicKeyParameters publicKeyParameters = privateKeyParameters.generatePublicKey();
         return new Ed25519KeyPair(privateKeyParameters, publicKeyParameters);
     }
 
     /**
-     * Decode base 64 sui key pair.
+     * Derive Ed25519 keypair from mnemonics and path. The mnemonics must be normalized
+     * and validated against the english wordlist.
      *
-     * @param encoded the encoded
-     * @return the sui key pair
+     * If path is none, it will default to m/44'/784'/0'/0'/0', otherwise the path must
+     * be compliant to SLIP-0010 in form m/44'/784'/{account_index}'/{change_index}'/{address_index}'.
+     * @param mnemonics
+     * @param path
+     * @return
      */
-    public static Ed25519KeyPair decodeBase64(byte[] encoded) {
-        Ed25519PrivateKeyParameters privateKeyParameters = new Ed25519PrivateKeyParameters(encoded, 1);
-        Ed25519PublicKeyParameters publicKeyParameters = privateKeyParameters.generatePublicKey();
-        return new Ed25519KeyPair(privateKeyParameters, publicKeyParameters);
+    public static Ed25519KeyPair deriveKeypair(String mnemonics, String path) {
+        if (path == null) {
+            path = DEFAULT_ED25519_DERIVATION_PATH;
+        }
+
+        if (!Mnemonics.isValidHardenedPath(path)) {
+            throw new MnemonicsException("Invalid derivation path");
+        }
+        Ed25519KeyDerive derived = Ed25519KeyDerive.derivePath(path, Mnemonics.mnemonicToSeedHex(mnemonics));
+
+        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(derived.getKey(), 0);
+        Ed25519PublicKeyParameters publicKey = privateKey.generatePublicKey();
+
+        return new Ed25519KeyPair(privateKey, publicKey);
+    }
+
+    /**
+     * Derive Ed25519 keypair from mnemonicSeed and path.
+     *
+     * If path is none, it will default to m/44'/784'/0'/0'/0', otherwise the path must
+     * be compliant to SLIP-0010 in form m/44'/784'/{account_index}'/{change_index}'/{address_index}'.
+     * @param seedHex
+     * @param path
+     * @return
+     */
+    public static Ed25519KeyPair deriveKeypairFromSeed(String seedHex, String path) {
+        if (path == null) {
+            path = DEFAULT_ED25519_DERIVATION_PATH;
+        }
+
+        if (!Mnemonics.isValidHardenedPath(path)) {
+            throw new MnemonicsException("Invalid derivation path");
+        }
+        Ed25519KeyDerive derived = Ed25519KeyDerive.derivePath(path, seedHex);
+
+        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(derived.getKey(), 0);
+        Ed25519PublicKeyParameters publicKey = privateKey.generatePublicKey();
+
+        return new Ed25519KeyPair(privateKey, publicKey);
     }
 
     /**

@@ -244,9 +244,17 @@ public class Sui4jBasicExample {
 - **Function**: Generate new Ed25519 key pair
 - **Test Case**: [`Ed25519KeyPairTest.createSuiKeyPair()`](src/test/java/com/dipcoin/sui/crypto/Ed25519KeyPairTest.java#L25)
 
+##### Mnemonics Generation
+- **Function**: Generate new Ed25519 key mnemonics
+- **Test Case**: [`Ed25519KeyPairTest.createSuiKeyDerive()`](src/test/java/com/dipcoin/sui/crypto/Ed25519KeyPairTest.java#L25)
+
 ##### Private Key Decoding
 - **Function**: Decode key pair from hexadecimal private key
 - **Test Case**: [`Ed25519KeyPairTest.decodeBase64_shouldWorkWithValidKey()`](src/test/java/com/dipcoin/sui/crypto/Ed25519KeyPairTest.java#L46)
+
+##### SuiPrivateKey Decoding
+- **Function**: Decode key pair from suiPrivateKey
+- **Test Case**: [`Ed25519KeyPairTest.importSuiKeyDerive()`](src/test/java/com/dipcoin/sui/crypto/Ed25519KeyPairTest.java#L46)
 
 ##### Address Generation
 - **Function**: Generate correctly formatted address
@@ -269,6 +277,10 @@ public class Sui4jBasicExample {
 ##### Key Pair Generation
 - **Function**: Generate new Secp256k1 key pair
 - **Test Case**: [`Scep256k1KeyPairTest.createSuiKeyPair()`](src/test/java/com/dipcoin/sui/crypto/Scep256k1KeyPairTest.java#L25)
+
+##### Mnemonics Generation
+- **Function**: Generate new Secp256k1 key mnemonics
+- **Test Case**: [`Scep256k1KeyPairTest.createSuiKeyDerive()`](src/test/java/com/dipcoin/sui/crypto/Scep256k1KeyPairTest.java#L25)
 
 ##### Private Key Decoding
 - **Function**: Decode key pair from hexadecimal private key

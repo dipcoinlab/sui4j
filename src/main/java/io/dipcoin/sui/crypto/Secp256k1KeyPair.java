@@ -13,14 +13,20 @@
 
 package io.dipcoin.sui.crypto;
 
+import io.dipcoin.sui.crypto.exceptions.MnemonicsException;
 import io.dipcoin.sui.crypto.exceptions.SigningException;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.wallet.DeterministicKeyChain;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bouncycastle.util.encoders.Hex;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author : Same
@@ -28,6 +34,8 @@ import java.util.Arrays;
  * @Description : Secp256k1 key pair
  */
 public class Secp256k1KeyPair extends SuiKeyPair<ECKey> {
+
+    private final static String DEFAULT_ED25519_DERIVATION_PATH = "m/54'/784'/0'/0/0";
 
     public Secp256k1KeyPair(byte[] privateKey) {
         this.keyPair = ECKey.fromPrivate(privateKey);
@@ -93,13 +101,33 @@ public class Secp256k1KeyPair extends SuiKeyPair<ECKey> {
     }
 
     /**
-     * Decode base 64 sui key pair.
+     * Derive Secp256k1 keypair from mnemonics and path. The mnemonics must be normalized
+     * and validated against the english wordlist.
      *
-     * @param encoded the encoded
-     * @return the sui key pair
+     * If path is none, it will default to m/54'/784'/0'/0/0, otherwise the path must
+     * be compliant to BIP-32 in form m/54'/784'/{account_index}'/{change_index}/{address_index}.
+     * @param mnemonics
+     * @param path
+     * @return
      */
-    public static Secp256k1KeyPair decodeBase64(byte[] encoded) {
-        return new Secp256k1KeyPair(Arrays.copyOfRange(encoded, 1, encoded.length));
+    public static Secp256k1KeyPair deriveKeypair(String mnemonics, String path) {
+        if (path == null) {
+            path = DEFAULT_ED25519_DERIVATION_PATH;
+        }
+
+        if (!Mnemonics.isValidBIP32Path(path)) {
+            throw new MnemonicsException("Invalid derivation path");
+        }
+        try {
+            DeterministicSeed seed = new DeterministicSeed(mnemonics, null, "", 0L);
+            DeterministicKeyChain chain = DeterministicKeyChain.builder().seed(seed).build();
+            List<ChildNumber> pathList = Mnemonics.parsePath(path);
+            DeterministicKey key = chain.getKeyByPath(pathList, true);
+
+            return new Secp256k1KeyPair(key.getPrivKeyBytes());
+        } catch (Exception e) {
+            throw new MnemonicsException("Failed to derive Secp256k1 keypair", e);
+        }
     }
 
     /**

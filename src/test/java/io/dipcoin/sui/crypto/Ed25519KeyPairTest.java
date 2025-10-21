@@ -74,6 +74,43 @@ public class Ed25519KeyPairTest {
     }
 
     @Test
+    void createSuiKeyDerive() {
+        // When
+        String seed = Mnemonics.generateMnemonics();
+        Ed25519KeyPair keyPair = Ed25519KeyPair.deriveKeypair(seed, null);
+        String address = keyPair.address();
+        System.out.println("Ed25519    seed : " + seed);
+        System.out.println("Ed25519 address : " + address);
+        System.out.println(" ---------------------------------------------------");
+
+        // Then
+        assertThat(keyPair).isNotNull();
+        assertThat(keyPair.getKeyPair()).isNotNull();
+        assertThat(address).isNotNull()
+                .startsWith("0x")
+                .hasSize(66);
+    }
+
+    @Test
+    void importSuiKeyDerive() {
+        // 0xe32e147fe5cd982f8f251de32ded6d8f1ecc173eb8efa445191bce2b1e63046b
+        // When
+        String suiKeyPair = "suiprivkey1qzagu7s3jtl44n9j7rrsn2595fcudya0q9pxmupv9v8eaxvcjrtpzs893s5";
+        SuiKeyPair keyPair = Ed25519KeyPair.decodeSuiPrivateKey(suiKeyPair);
+        String address = keyPair.address();
+        System.out.println("Ed25519 address : " + address);
+        System.out.println(" ---------------------------------------------------");
+
+        // Then
+        assertThat(keyPair).isNotNull();
+        assertThat(keyPair.getKeyPair()).isNotNull();
+        assertThat(address).isNotNull()
+                .startsWith("0x")
+                .hasSize(66);
+        assertThat(address).isEqualTo("0xe32e147fe5cd982f8f251de32ded6d8f1ecc173eb8efa445191bce2b1e63046b");
+    }
+
+    @Test
     void decodeBase64_shouldWorkWithValidKey() {
         // When
         Ed25519KeyPair keyPair = (Ed25519KeyPair) Ed25519KeyPair.decodeHex(VALID_BASE64_KEY);
