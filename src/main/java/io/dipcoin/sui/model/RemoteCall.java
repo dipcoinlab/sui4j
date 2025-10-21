@@ -14,7 +14,6 @@
 package io.dipcoin.sui.model;
 
 import io.dipcoin.sui.util.Async;
-import io.reactivex.Flowable;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -51,12 +50,4 @@ public class RemoteCall<T> {
         return Async.run(this::send);
     }
 
-    /**
-     * Provide an flowable to emit result from our function.
-     *
-     * @return an flowable
-     */
-    public Flowable<T> flowable() {
-        return Flowable.fromCallable(this::send);
-    }
 }

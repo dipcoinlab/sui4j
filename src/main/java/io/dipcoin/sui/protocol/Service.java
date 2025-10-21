@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dipcoin.sui.model.Request;
 import io.dipcoin.sui.model.Response;
 import io.dipcoin.sui.util.Async;
-import io.reactivex.Flowable;
-import io.reactivex.Notification;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,12 +63,4 @@ public abstract class Service implements SuiService{
         return Async.run(() -> send(jsonRpc20Request, responseType));
     }
 
-    @Override
-    public <T extends Notification<?>> Flowable<T> subscribe(
-            Request request, String unsubscribeMethod, Class<T> responseType) {
-        throw new UnsupportedOperationException(
-                String.format(
-                        "Service %s does not support subscriptions",
-                        this.getClass().getSimpleName()));
-    }
 }

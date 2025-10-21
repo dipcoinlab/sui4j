@@ -66,13 +66,6 @@
             <version>${lombok.version}</version>
         </dependency>
 
-        <!-- JavaRX -->
-        <dependency>
-            <groupId>io.reactivex.rxjava2</groupId>
-            <artifactId>rxjava</artifactId>
-            <version>${rxjava.version}</version>
-        </dependency>
-
         <!-- OkHttp underlying engine-->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
