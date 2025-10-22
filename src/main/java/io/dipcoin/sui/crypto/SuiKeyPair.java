@@ -18,6 +18,7 @@ import io.dipcoin.sui.bcs.types.intent.IntentScope;
 import io.dipcoin.sui.crypto.exceptions.SignatureSchemeNotSupportedException;
 import io.dipcoin.sui.crypto.exceptions.SigningException;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
+import org.bitcoinj.core.Bech32;
 import org.bouncycastle.crypto.digests.Blake2bDigest;
 import org.bouncycastle.jcajce.provider.digest.Blake2b;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.util.Arrays;
 
 /**
  * @author : Same
@@ -36,6 +38,8 @@ import java.security.Security;
  */
 public abstract class SuiKeyPair<T> {
 
+    private static final String SUI_PRIVATE_KEY_PREFIX = "suiprivkey";
+    private static final int PRIVATE_KEY_SIZE = 32;
     protected final static String ADDRESS_PREFIX = "0x";
     protected static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -294,32 +298,6 @@ public abstract class SuiKeyPair<T> {
     }
 
     /**
-     * Decode base64 sui key pair.
-     *
-     * @param encoded the encoded
-     * @return the sui key pair
-     * @throws SignatureSchemeNotSupportedException the signature scheme not supported exception
-     */
-    public static SuiKeyPair<?> decodeBase64(String encoded)
-            throws SignatureSchemeNotSupportedException {
-        final byte[] keyPairBytes = Base64.decode(encoded);
-
-        final SignatureScheme scheme = SignatureScheme.findByScheme(keyPairBytes[0]);
-        if (scheme == null) {
-            throw new SignatureSchemeNotSupportedException();
-        }
-        return switch (scheme) {
-            case ED25519 -> Ed25519KeyPair.decodeBase64(keyPairBytes);
-            case SECP256K1 -> Secp256k1KeyPair.decodeBase64(keyPairBytes);
-//            case SECP256R1 -> Secp256r1KeyPair.decodeBase64(keyPairBytes);
-//            case MULTISIG -> MultisigKeyPair.decodeBase64(keyPairBytes);
-//            case ZKLOGIN -> ZkLoginKeyPair.decodeBase64(keyPairBytes);
-//            case PASSKEY -> PassKeyKeyPair.decodeBase64(keyPairBytes);
-            default -> throw new SignatureSchemeNotSupportedException();
-        };
-    }
-
-    /**
      * Decode hex sui key pair.
      *
      * @param encoded the encoded
@@ -372,4 +350,57 @@ public abstract class SuiKeyPair<T> {
      * @return the sui key
      */
     public abstract byte[] privateKey();
+
+    /**
+     * Encode suiprivkey
+     * @param privateKey
+     * @param scheme
+     * @return
+     */
+    public static String encodeSuiPrivateKey(byte[] privateKey, SignatureScheme scheme) {
+        if (privateKey.length != PRIVATE_KEY_SIZE) {
+            throw new IllegalArgumentException("Invalid private key length: " + privateKey.length);
+        }
+
+        Byte flag = scheme.getScheme();
+
+        // flag || privateKey
+        byte[] data = new byte[PRIVATE_KEY_SIZE + 1];
+        data[0] = flag;
+        System.arraycopy(privateKey, 0, data, 1, PRIVATE_KEY_SIZE);
+
+        // Bech32 encode
+        return Bech32.encode(Bech32.Encoding.BECH32, SUI_PRIVATE_KEY_PREFIX, Bech32Words.toWords(data));
+    }
+
+    /**
+     * Decode suiprivkey
+     * @param bech32String
+     * @return
+     */
+    public static SuiKeyPair decodeSuiPrivateKey(String bech32String) {
+        Bech32.Bech32Data decoded = Bech32.decode(bech32String);
+        if (!SUI_PRIVATE_KEY_PREFIX.equals(decoded.hrp)) {
+            throw new IllegalArgumentException("Invalid private key prefix: " + decoded.hrp);
+        }
+
+        byte[] extended = Bech32Words.fromWords(decoded.data);
+        if (extended.length != PRIVATE_KEY_SIZE + 1) {
+            throw new IllegalArgumentException("Invalid encoded key length");
+        }
+
+        byte flag = extended[0];
+        SignatureScheme scheme = SignatureScheme.findByScheme(flag);
+        if (scheme == null) {
+            throw new IllegalArgumentException("Unknown signature flag: " + flag);
+        }
+
+        byte[] secretKey = Arrays.copyOfRange(extended, 1, extended.length);
+        switch (scheme) {
+            case ED25519 -> {return new Ed25519KeyPair(secretKey);}
+            case SECP256K1 -> {return new Secp256k1KeyPair(secretKey);}
+            default -> throw new SignatureSchemeNotSupportedException();
+        }
+    }
+
 }

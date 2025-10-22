@@ -23,7 +23,6 @@ package io.dipcoin.sui.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.dipcoin.sui.protocol.SuiService;
 import io.dipcoin.sui.protocol.core.DefaultIdProvider;
-import io.reactivex.Flowable;
 
 import java.io.IOException;
 import java.util.List;
@@ -102,7 +101,4 @@ public class Request<S, T extends Response> {
         return suiService.sendAsync(this, responseType);
     }
 
-    public Flowable<T> flowable() {
-        return new RemoteCall<>(this::send).flowable();
-    }
 }

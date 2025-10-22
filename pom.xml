@@ -6,7 +6,7 @@
 
     <groupId>io.dipcoin</groupId>
     <artifactId>sui4j</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
     <name>sui4j</name>
     <description>A Sui SDK designed for building maintainable, high-performance Java servers.</description>
     <url>https://github.com/dipcoinlab/sui4j</url>
@@ -40,7 +40,6 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.30</lombok.version>
-        <rxjava.version>2.2.21</rxjava.version>
         <okhttp.version>4.12.0</okhttp.version>
         <jackson.version>2.15.0</jackson.version>
         <slf4j.version>2.0.13</slf4j.version>
@@ -64,13 +63,6 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
             <version>${lombok.version}</version>
-        </dependency>
-
-        <!-- JavaRX -->
-        <dependency>
-            <groupId>io.reactivex.rxjava2</groupId>
-            <artifactId>rxjava</artifactId>
-            <version>${rxjava.version}</version>
         </dependency>
 
         <!-- OkHttp underlying engine-->

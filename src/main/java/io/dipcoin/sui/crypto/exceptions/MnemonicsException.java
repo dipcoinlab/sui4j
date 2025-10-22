@@ -15,16 +15,16 @@ package io.dipcoin.sui.crypto.exceptions;
 
 /**
  * @author : Same
- * @datetime : 2025/6/26 11:02
+ * @datetime : 2025/10/21 15:46
  * @Description :
  */
-public class SigningException extends RuntimeException{
+public class MnemonicsException extends RuntimeException {
 
-    public SigningException(String message) {
+    public MnemonicsException(String message) {
         super(message);
     }
 
-    public SigningException(String message, Throwable cause) {
+    public MnemonicsException(String message, Throwable cause) {
         super(message, cause);
     }
 
