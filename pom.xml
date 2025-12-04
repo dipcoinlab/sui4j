@@ -6,7 +6,7 @@
 
     <groupId>io.dipcoin</groupId>
     <artifactId>sui4j</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
     <name>sui4j</name>
     <description>A Sui SDK designed for building maintainable, high-performance Java servers.</description>
     <url>https://github.com/dipcoinlab/sui4j</url>

@@ -14,7 +14,6 @@
 package io.dipcoin.sui.bcs.types.arg.call;
 
 import io.dipcoin.sui.bcs.PureBcs;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -27,8 +26,18 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class CallArgPure extends CallArg {
+
+    public CallArgPure(Object arg, PureBcs.BasePureType basePureType) {
+        this.arg = arg;
+        this.basePureType = basePureType;
+    }
+
+    public CallArgPure(byte[] rawBytes) {
+        this.rawBytes = rawBytes;
+    }
+
+    private byte[] rawBytes;
 
     private Object arg;
 

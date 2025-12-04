@@ -21,7 +21,6 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * @author : Same
@@ -173,6 +172,25 @@ public class BcsDeserializer {
 
         return result;
     }
+
+    /**
+     * Deserialize Pure length nested ULEB128 encoding
+     */
+    public int readUleb128Pure() throws IOException {
+        // read totalLen
+        int totalLen = readUleb128();
+        if (totalLen == 0) {
+            return totalLen;
+        }
+
+        // read innerLen
+        int innerLen = readUleb128();
+
+        if (innerLen > totalLen) {
+            throw new IOException("Inner length > total length");
+        }
+        return innerLen;
+    }
     
     /**
      * Deserialize string
@@ -211,28 +229,40 @@ public class BcsDeserializer {
         }
         return bytes;
     }
+
+    /**
+     * Deserialize fixed byte array
+     */
+    public byte[] readFixedBytes(int fixedLen) throws IOException {
+        byte[] bytes = new byte[fixedLen];
+        int bytesRead = input.read(bytes);
+        if (bytesRead != fixedLen) {
+            throw new IOException("Unexpected end of input");
+        }
+        return bytes;
+    }
     
     /**
      * Deserialize vector<u8> vector
      */
     public byte[] readVector() throws IOException {
         int length = readUleb128();
-        byte[] bytes = new byte[length];
-        int bytesRead = input.read(bytes);
-        if (bytesRead != length) {
-            throw new IOException("Unexpected end of input");
+        if (length == 0) {
+            return new byte[0];
         }
+        byte[] bytes = new byte[length];
+        input.read(bytes);
         return bytes;
     }
 
     /**
      * Deserialize vector
      */
-    public <T> List<T> readVector(Function<BcsDeserializer, T> elementDeserializer) throws IOException {
+    public <T> List<T> readVector(BcsDeserializer.BcsTypeDeserializer<T> deserializer) throws IOException {
         int size = readUleb128();
         List<T> result = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            result.add(elementDeserializer.apply(this));
+            result.add(deserializer.deserialize(this));
         }
         return result;
     }
@@ -240,12 +270,12 @@ public class BcsDeserializer {
     /**
      * Deserialize Option type
      */
-    public <T> T readOption(Function<BcsDeserializer, T> elementDeserializer) throws IOException {
+    public <T> T readOption(BcsDeserializer.BcsTypeDeserializer<T> deserializer) throws IOException {
         byte variant = readU8();
         if (variant == 0) {
             return null; // None
         } else if (variant == 1) {
-            return elementDeserializer.apply(this); // Some
+            return deserializer.deserialize(this); // Some
         } else {
             throw new IOException("Invalid option variant: " + variant);
         }
@@ -254,20 +284,20 @@ public class BcsDeserializer {
     /**
      * Deserialize enum type
      */
-    public <T> T readEnum(Map<Integer, Function<BcsDeserializer, T>> variantMap) throws IOException {
+    public <T> T readEnum(Map<Integer, BcsDeserializer.BcsTypeDeserializer<T>> variantMap) throws IOException {
         int variant = readU32();
-        Function<BcsDeserializer, T> deserializer = variantMap.get(variant);
+        BcsDeserializer.BcsTypeDeserializer<T> deserializer = variantMap.get(variant);
         if (deserializer == null) {
             throw new IOException("Unknown enum variant: " + variant);
         }
-        return deserializer.apply(this);
+        return deserializer.deserialize(this);
     }
     
     /**
      * Deserialize struct
      */
-    public <T> T readStruct(Function<BcsDeserializer, T> structDeserializer) throws IOException {
-        return structDeserializer.apply(this);
+    public <T> T readStruct(BcsDeserializer.BcsTypeDeserializer<T> structDeserializer) throws IOException {
+        return structDeserializer.deserialize(this);
     }
     
     /**
@@ -304,4 +334,13 @@ public class BcsDeserializer {
     public void close() throws IOException {
         input.close();
     }
+
+    /**
+     * BCS type deserializer interface
+     */
+    @FunctionalInterface
+    public interface BcsTypeDeserializer<T> {
+        T deserialize(BcsDeserializer deserializer) throws IOException;
+    }
+
 } 

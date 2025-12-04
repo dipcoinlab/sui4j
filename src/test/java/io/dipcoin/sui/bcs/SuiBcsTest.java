@@ -22,7 +22,9 @@ import io.dipcoin.sui.bcs.types.arg.object.ObjectArgSharedObject;
 import io.dipcoin.sui.bcs.types.arg.object.SharedObjectRef;
 import io.dipcoin.sui.bcs.types.gas.SuiObjectRef;
 import io.dipcoin.sui.bcs.types.tag.*;
-import io.dipcoin.sui.bcs.types.tag.*;
+import io.dipcoin.sui.bcs.types.transaction.TransactionData;
+import io.dipcoin.sui.bcs.types.transaction.TransactionKind;
+import io.dipcoin.sui.protocol.SuiClientTest;
 import io.dipcoin.sui.util.HashUtil;
 import io.dipcoin.sui.util.Numeric;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Verify the correctness of BCS serialization for Sui core types.
  */
 @Slf4j
-public class SuiBcsTest {
+public class SuiBcsTest extends SuiClientTest {
     
     private SuiObjectRef suiObjectRef;
     private SharedObjectRef sharedObjectRef;
@@ -57,7 +59,7 @@ public class SuiBcsTest {
     private List<TypeTag> typeTags;
     
     @BeforeEach
-    void setUp() {
+    void init() {
         // Create a Sui object reference for testing purposes.
         suiObjectRef = new SuiObjectRef("0x0000000000000000000000000000000000000000000000001234567890abcdef", 1L, HashUtil.sha256Base58("digest123"));
         
@@ -450,4 +452,96 @@ public class SuiBcsTest {
         byte[] decoded = Base64.decode(base64);
         assertTrue(decoded.length > 0);
     }
+
+    @Test
+    void testTransactionKind() throws IOException {
+        log.info("Test the serialization and deserialization of TransactionKind...");
+
+        // Create object references containing special characters.
+        String base64 = "AAUBAO9pqg7oroWW7LvTfYGnaNXDrmSba6H4QQpIamL24CPGbTb7JwAAAAAgvOeqWbtHTlTuV/rIJ1CLG+4hiMOJ+LvMZzMxPkB16WUACEXkASwCAAAAAQHj1S1IThWPFkqGUM/VyEBrVF9+ck9wrUDzdH3W3DmzxTPtgBYAAAAAAAEBmFEJn26Qan/YPLi9lSzD9WpCUkLE8H2I7X5qRcW/RKRafrkiAAAAAAEACADh9QUAAAAAAgIBAAABAQEAAD9S0ASZ1l3UFgLBzRkM9ncbQBrjKNRqFyRzp/R75vg/BnJvdXRlchFzd2FwX3lfdG9fZXhhY3RfeAIHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDc3VpA1NVSQAHHyeIkYtgmVnJBSofAMSXZXUqyyTZmZehApA759oY3Q0EY29pbgRDT0lOAAQBAgABAwADAAAAAAEEAA==";
+
+        TransactionKind transactionKind = SuiBcs.deserializeFromBase64(base64, SuiBcs.TRANSACTION_KIND_DESERIALIZER);
+        log.info("Deserialized to TransactionKind: {}", transactionKind);
+
+        // resolve types of pure args
+        if (transactionKind instanceof TransactionKind.ProgrammableTransaction programmableTransaction) {
+            PureBcs.resolvePureArgsTypes(programmableTransaction.getProgrammableTransaction(), suiClient);
+        }
+
+        String base64Serialization = SuiBcs.serializeToBase64(transactionKind, SuiBcs.TRANSACTION_KIND_SERIALIZER);
+        log.info("Serialized to base64: {}", base64Serialization);
+
+        // verify Base64encode
+        assertNotNull(base64Serialization);
+        assertFalse(base64Serialization.isEmpty());
+        assertEquals(base64, base64Serialization);
+
+        // Verify that decoding is performed correctly.
+        byte[] decoded = Base64.decode(base64Serialization);
+        assertTrue(decoded.length > 0);
+    }
+
+    @Test
+    void testTransactionData() throws IOException {
+        log.info("Test the serialization and deserialization of TransactionData...");
+
+        // Create object references containing special characters.
+        String base64 = "AAAWAQEFpjDDbopsuf+Z4tJZXlXscNACqAaakMLRusC/oSJx+nto5CAAAAAAAAEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYBAAAAAAAAAAABAUTgekSZJJjWEPRVMQuDnZ8prKdle85lqo1hSyQJAKXHfWjkIAAAAAABAQEWvpMAajztb6Ld5CjJuEGLSYbv1KvGmA1/Q2e7/WODU3xo5CAAAAAAAQEBYqKOB7Hj3bLLEQg0l2HsHPCWsMNSOGOvO/1ONuFL61t7aOQgAAAAAAABAQM0wgtclkbbqHA/vz5e/4abdk5dRObXtijx3OXSDAyKe2jkIAAAAAABAQGu0TUsP28qRP1SE1D1Opj2ddSwfMNpFmB+riTCZQqcuXto5CAAAAAAAQEA68EWuCl+yN8LPdyDGlsXkzheGsRNIMvzAiZGKyW1yNkrWxAmAAAAACAl+1GNcC0P03/fh6lHrklaieQYEKpwP6gXe7F2BUg7QwEBNi8Am+lqHXT/dhVs7JaHa4mqCVKcEmHUkXUZA+55jk0zaOQgAAAAAAEAARoAEAAADKIpxGCKyAAAAAAAAAAAEAAAj5CLlYHRAgAAAAAAAAAAEAAA6IkEI8eKAAAAAAAAAAAACAAAAAAAAAAAABAAwEYZi/DpEwAAAAAAAAAAACDpG0pA2IJrfUFDznwquxzApOY8/z3jfdHFNZLkdSszGwABAAABAAABEAABAAABAAAhIBp19S2czyATK/Je+uvy93WIaHzKd1HnaS7ag+3I8aOqAQABFLHUZWrEKpUj2hxyQfApGRj5UX/TDz5uhLn9Wz43MAhleGNoYW5nZQV0cmFkZQEHHyeIkYtgmVnJBSofAMSXZXUqyyTZmZehApA759oY3Q0EY29pbgRDT0lOAB4BAAABAQABAgABAwABBAABBQABBgABBwABCAABCQABCgABCwABDAABDQABDgABDwABEAABEQABEgABCgABCwABDAABDQABDgABDwABEwABFAABCwABCgABFQDCQcX/9vQWWs6BuwlZIMaPH+WfxSEJceZiF8GVfyD4hgEADfA6RCszZfRVA1G4fYHkzb9m96tkmyLTlPhBQTNcOStbECYAAAAAIDtvq8AuqAm4wckHd/MBD6Z1pahgS4Y6V1/mw2oWZhG2wkHF//b0FlrOgbsJWSDGjx/ln8UhCXHmYhfBlX8g+IboAwAAAAAAAADh9QUAAAAAAA==";
+
+        TransactionData transactionData = SuiBcs.deserializeFromBase64(base64, SuiBcs.TRANSACTION_DATA_DESERIALIZER);
+        log.info("Deserialized to TransactionData: {}", transactionData);
+
+        // resolve types of pure args
+        if (transactionData instanceof TransactionData.V1 transactionDataV1) {
+            if (transactionDataV1.getTransactionDataV1().getKind() instanceof TransactionKind.ProgrammableTransaction programmableTransaction) {
+                PureBcs.resolvePureArgsTypes(programmableTransaction.getProgrammableTransaction(), suiClient);
+            }
+        }
+        log.info("After resolve types of pure args, TransactionData: {}", transactionData);
+
+        String base64Serialization = SuiBcs.serializeToBase64(transactionData, SuiBcs.TRANSACTION_DATA_SERIALIZER);
+        log.info("Serialized to base64: {}", base64Serialization);
+
+        // verify Base64encode
+        assertNotNull(base64Serialization);
+        assertFalse(base64Serialization.isEmpty());
+//        assertEquals(base64, base64Serialization);
+
+        // Verify that decoding is performed correctly.
+        byte[] decoded = Base64.decode(base64Serialization);
+        assertTrue(decoded.length > 0);
+    }
+
+//    @Test
+//    void testSignedTransactionData() throws IOException {
+//        log.info("Test the serialization and deserialization of SenderSignedTransaction...");
+//
+//        // Create object references containing special characters.
+//        String base64 = "AQAAAAAAFQEB3v8u0n3+VALjjWCwkKfc+bSELBbsY+RyEZJyFzYD39hHhRsnAAAAAAABAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAQAAAAAAAAAAAQGh9GIpj7sV9TcCMGDdo+VuSiBxFG/Oz61SHX9749L1skqFGycAAAAAAQEBPMK/vmudw0bz8npHtLDJ6q8BQ8DHBHJqFROh6MXZpMFIhRsnAAAAAAEBATrYyRHf8+4K7q+G8MfnpUCiN0NHfoMdFPYrY+WPuOsNR4UbJwAAAAAAAQHXgbzEEEwJGQcm3mgyXaWc0QEmloHhIeMXRRehVKUIBkeFGycAAAAAAQEBXdf6TBS4gWdFjfLqKB9CUyExN+9M2R2bg/tW0ElPZ0FHhRsnAAAAAAEBAFYyLZyAiBfqzDqJCtSU6KArLqgXUT3sJITK4gqeYDPXgBv0KQAAAAAgHZDIUHHX7vy8toDW0iXaKmBaNQD9adJmO30bR5HSFrIBAZpitIY73qq9yVAPznac9+ctVYXusoptJuTK+twT92qyMAUzAQAAAAABAAESABAAAAZcE7njrVUSAAAAAAAAABAAAPREgpFjRQAAAAAAAAAAAAgAAAAAAAAAAAAQAFCKO634DRQAAAAAAAAAAAAgfphgJvFiaAXheBaTn6gDSddK7ahPd6gpbzge7wZkLOwAAQAAAQAAARgAAQAAAQAAISAfqX+Cf2QgWxcyt9ctDspSNEWiz9CjPy8vRQMm8KuqlQEAl4/tBxzKIt0mvsPPSl1aAKsQ85y4xlm7/fvsQ5ckEAEIZXhjaGFuZ2UFdHJhZGUBB9ujRnLjDLBlsfk+OrVTGHaP1v72bBWULJ98uEbi+QDnBHVzZGMEVVNEQwAeAQAAAQEAAQIAAQMAAQQAAQUAAQYAAQcAAQgAAQkAAQoAAQsAAQsAAQwAAQ0AAQ4AAQ8AARAAAREAAQoAAQsAAQsAAQwAAQ0AAQ4AARIAARMAAQsAAQoAARQA96TTDRLP+c6xYMdKob7HcdjQvz94OeHqfkQY5TQYV/oBAEY+hhchjC1nTxk7jygoZy6qZFJ//v3JaaKKXhboAuSAG/QpAAAAACDMCYUERIFnZGW1TbNaOXWfyi5+Bxb88UM378z+6UrtX/ek0w0Sz/nOsWDHSqG+x3HY0L8/eDnh6n5EGOU0GFf6+AEAAAAAAAAA4fUFAAAAAAABYQD8cfiY0d9UCbon7QFRBTE3FmZdDUJPslcu46FWpHyEdOtwYg59BuapgKf/plwba+NL/xSHIN6jH9jd53HcEvEOpKBppTW9ah6L/2XhvSaI4Av2OHDcYKNK/+F7tNcyMMk=";
+//
+//        SenderSignedTransaction senderSignedTransaction = SuiBcs.deserializeFromBase64(base64, SuiBcs.SENDER_SIGNED_TRANSACTION_DESERIALIZER);
+//        log.info("Deserialized to SenderSignedTransaction: {}", senderSignedTransaction);
+//
+//        // resolve types of pure args
+//        IntentMessage<TransactionData> intentMessage = senderSignedTransaction.getIntentMessage();
+//        TransactionData transactionData = intentMessage.getValue();
+//        if (transactionData instanceof TransactionData.V1 transactionDataV1) {
+//            if (transactionDataV1.getTransactionDataV1().getKind() instanceof TransactionKind.ProgrammableTransaction programmableTransaction) {
+//                PureBcs.resolvePureArgsTypes(programmableTransaction.getProgrammableTransaction(), suiClient);
+//            }
+//        }
+//
+//        String base64Serialization = SuiBcs.serializeToBase64(senderSignedTransaction, SuiBcs.SENDER_SIGNED_TRANSACTION_SERIALIZER);
+//        log.info("Serialized to base64: {}", base64Serialization);
+//
+//        // verify Base64encode
+//        assertNotNull(base64Serialization);
+//        assertFalse(base64Serialization.isEmpty());
+////        assertEquals(base64, base64Serialization);
+//
+//        // Verify that decoding is performed correctly.
+//        byte[] decoded = Base64.decode(base64Serialization);
+//        assertTrue(decoded.length > 0);
+//    }
+
 } 

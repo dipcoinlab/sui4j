@@ -17,16 +17,11 @@ import io.dipcoin.sui.bcs.types.arg.call.CallArg;
 import io.dipcoin.sui.bcs.types.arg.call.CallArgObjectArg;
 import io.dipcoin.sui.bcs.types.arg.call.CallArgPure;
 import io.dipcoin.sui.bcs.types.arg.object.*;
-import io.dipcoin.sui.bcs.types.arg.object.*;
 import io.dipcoin.sui.bcs.types.auth.PasskeyAuthenticator;
 import io.dipcoin.sui.bcs.types.gas.GasData;
 import io.dipcoin.sui.bcs.types.gas.SuiObjectRef;
 import io.dipcoin.sui.bcs.types.intent.*;
-import io.dipcoin.sui.bcs.types.intent.*;
 import io.dipcoin.sui.bcs.types.owner.Owner;
-import io.dipcoin.sui.bcs.types.signature.*;
-import io.dipcoin.sui.bcs.types.tag.*;
-import io.dipcoin.sui.bcs.types.transaction.*;
 import io.dipcoin.sui.bcs.types.signature.*;
 import io.dipcoin.sui.bcs.types.tag.*;
 import io.dipcoin.sui.bcs.types.transaction.*;
@@ -39,7 +34,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 /**
  * @author : Same
@@ -49,7 +43,7 @@ import java.util.function.Function;
 public class SuiBcs {
     
     // Constant definitions.
-    public static final int SUI_ADDRESS_LENGTH = 32;
+    public static final int FIXED_LENGTH = 32;
     
     // Cache serializers to improve performance.
     private static final Map<Class<?>, BcsSerializer.BcsTypeSerializer<?>> SERIALIZER_CACHE = new ConcurrentHashMap<>();
@@ -72,7 +66,7 @@ public class SuiBcs {
      */
     public static final BcsSerializer.BcsTypeSerializer<String> OBJECT_DIGEST_SERIALIZER = (serializer, digest) -> {
         byte[] digestBytes = Numeric.base58ToBytes(digest);
-        if (digestBytes.length != 32) {
+        if (digestBytes.length != FIXED_LENGTH) {
             throw new IllegalArgumentException("ObjectDigest must be 32 bytes");
         }
         serializer.writeBytes(digestBytes);
@@ -535,6 +529,389 @@ public class SuiBcs {
             throw new IllegalArgumentException("Unknown Owner type: " + owner.getClass());
         }
     };
+
+    /**
+     * Address type deserializer.
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<String> ADDRESS_DESERIALIZER = (deserializer) -> {
+        // serialize address
+        byte[] readAddress = deserializer.readAddress();
+        String address = ObjectIdUtil.toAddress(readAddress);
+
+        // verify address
+        if (!isValidSuiAddress(ObjectIdUtil.normalizeSuiAddress(address))) {
+            throw new IllegalArgumentException("Invalid Sui address: " + address);
+        }
+        return address;
+    };
+
+    /**
+     * Object summary deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<String> OBJECT_DIGEST_DESERIALIZER = (deserializer) -> {
+        byte[] bytes = deserializer.readBytes();
+        if (bytes.length != FIXED_LENGTH) {
+            throw new IllegalArgumentException("Invalid objectDigest!");
+        }
+        return Numeric.bytesToBase58(bytes);
+    };
+
+    /**
+     * SuiObjectRef deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<SuiObjectRef> SUI_OBJECT_REF_DESERIALIZER = (deserializer) -> {
+        String address = ADDRESS_DESERIALIZER.deserialize(deserializer);
+        long version = deserializer.readU64();
+        String digest = OBJECT_DIGEST_DESERIALIZER.deserialize(deserializer);
+        return new SuiObjectRef(address, version, digest);
+    };
+
+    /**
+     * SharedObjectRef deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<SharedObjectRef> SHARED_OBJECT_REF_DESERIALIZER = (deserializer) -> {
+        String objectId = ADDRESS_DESERIALIZER.deserialize(deserializer);
+        long version = deserializer.readU64();
+        boolean mutable = deserializer.readBool();
+        return new SharedObjectRef(objectId, version, mutable);
+    };
+
+    /**
+     * ObjectArg deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<ObjectArg> OBJECT_ARG_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new ObjectArgImmOrOwnedObject(SUI_OBJECT_REF_DESERIALIZER.deserialize(deserializer));
+            case (byte) 1 -> new ObjectArgSharedObject(SHARED_OBJECT_REF_DESERIALIZER.deserialize(deserializer));
+            case (byte) 2 -> new ObjectArgReceiving(SUI_OBJECT_REF_DESERIALIZER.deserialize(deserializer));
+            default -> throw new IllegalArgumentException("Unknown ObjectArg flag: " + flag);
+        };
+    };
+
+    /**
+     * CallArg deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<CallArg> CALL_ARG_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new CallArgPure(deserializer.readBytes());
+            case (byte) 1 -> deserializeObjectArg(deserializer);
+            default -> throw new IllegalArgumentException("Unknown CallArg flag: " + flag);
+        };
+    };
+
+    /**
+     * deserialize ObjectArg
+     */
+    public static CallArgObjectArg deserializeObjectArg(BcsDeserializer deserializer) throws IOException {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new CallArgObjectArg(new ObjectArgImmOrOwnedObject(SUI_OBJECT_REF_DESERIALIZER.deserialize(deserializer)));
+            case (byte) 1 -> new CallArgObjectArg(new ObjectArgSharedObject(SHARED_OBJECT_REF_DESERIALIZER.deserialize(deserializer)));
+            case (byte) 2 -> new CallArgObjectArg(new ObjectArgReceiving(SUI_OBJECT_REF_DESERIALIZER.deserialize(deserializer)));
+            default -> throw new IllegalArgumentException("Unknown CallArgObjectArg flag: " + flag);
+        };
+    }
+
+    /**
+     * TypeTag deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<TypeTag> TYPE_TAG_DESERIALIZER = SuiBcs::deserializeTypeTag;
+
+    /**
+     * serialize TypeTag
+     */
+    private static TypeTag deserializeTypeTag(BcsDeserializer deserializer) throws IOException {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> TypeTagBool.INSTANCE;
+            case (byte) 1 -> TypeTagU8.INSTANCE;
+            case (byte) 2 -> TypeTagU64.INSTANCE;
+            case (byte) 3 -> TypeTagU128.INSTANCE;
+            case (byte) 4 -> TypeTagAddress.INSTANCE;
+            case (byte) 5 -> TypeTagSigner.INSTANCE;
+            case (byte) 6 -> new TypeTagVector(deserializeTypeTag(deserializer));
+            case (byte) 7 -> new TypeTagStruct(deserializeStructTag(deserializer));
+            case (byte) 8 -> TypeTagU16.INSTANCE;
+            case (byte) 9 -> TypeTagU32.INSTANCE;
+            case (byte) 10 -> TypeTagU256.INSTANCE;
+            default -> throw new IllegalArgumentException("Unknown typeTag type flag: " + flag);
+        };
+    }
+
+    /**
+     * StructTag deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<TypeTagStructTag> STRUCT_TAG_DESERIALIZER = SuiBcs::deserializeStructTag;
+
+    /**
+     * deserialize StructTag
+     */
+    private static TypeTagStructTag deserializeStructTag(BcsDeserializer deserializer) throws IOException {
+        return new TypeTagStructTag(ADDRESS_DESERIALIZER.deserialize(deserializer),
+                deserializer.readString(),  // module
+                deserializer.readString(),  // name
+                deserializer.readVector(TYPE_TAG_DESERIALIZER)  // typePamams
+        );
+    }
+
+    /**
+     * GasData deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<GasData> GAS_DATA_DESERIALIZER = (deserializer) -> new GasData(
+            deserializer.readVector(SUI_OBJECT_REF_DESERIALIZER),
+            ADDRESS_DESERIALIZER.deserialize(deserializer),
+            deserializer.readU64(),
+            BigInteger.valueOf(deserializer.readU64())
+    );
+
+    /**
+     * Argument deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<Argument> ARGUMENT_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> Argument.GasCoin.INSTANCE;
+            case (byte) 1 -> Argument.Input.ofInput(deserializer.readU16());
+            case (byte) 2 -> Argument.Result.ofResult(deserializer.readU16());
+            case (byte) 3 -> new Argument.NestedResult(deserializer.readU16(), deserializer.readU16());
+            default -> throw new IllegalArgumentException("Unknown Argument type flag: " + flag);
+        };
+    };
+
+    /**
+     * ProgrammableMoveCall deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<ProgrammableMoveCall> PROGRAMMABLE_MOVE_CALL_DESERIALIZER = (deserializer) -> new ProgrammableMoveCall(
+            ADDRESS_DESERIALIZER.deserialize(deserializer),
+            deserializer.readString(),  // module
+            deserializer.readString(),  // function
+            deserializer.readVector(TYPE_TAG_DESERIALIZER),  // typeArguments
+            deserializer.readVector(ARGUMENT_DESERIALIZER)      // arguments
+
+    );
+
+    /**
+     * Command deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<Command> COMMAND_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new Command.MoveCall(PROGRAMMABLE_MOVE_CALL_DESERIALIZER.deserialize(deserializer));
+            case (byte) 1 -> new Command.TransferObjects(deserializer.readVector(ARGUMENT_DESERIALIZER), ARGUMENT_DESERIALIZER.deserialize(deserializer));
+            case (byte) 2 -> new Command.SplitCoins(ARGUMENT_DESERIALIZER.deserialize(deserializer), deserializer.readVector(ARGUMENT_DESERIALIZER));
+            case (byte) 3 -> new Command.MergeCoins(ARGUMENT_DESERIALIZER.deserialize(deserializer), deserializer.readVector(ARGUMENT_DESERIALIZER));
+            case (byte) 4 -> new Command.Publish(deserializer.readVector(BcsDeserializer::readBytes), deserializer.readVector(ADDRESS_DESERIALIZER));
+            case (byte) 5 -> new Command.MakeMoveVec(deserializer.readBool() ? deserializer.readString() : null, deserializer.readVector(ARGUMENT_DESERIALIZER));
+            case (byte) 6 -> new Command.Upgrade(deserializer.readVector(BcsDeserializer::readBytes), deserializer.readVector(ADDRESS_DESERIALIZER), ADDRESS_DESERIALIZER.deserialize(deserializer), ARGUMENT_DESERIALIZER.deserialize(deserializer));
+            default -> throw new IllegalArgumentException("Unknown Command type flag: " + flag);
+        };
+    };
+
+    /**
+     * ProgrammableTransaction deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<ProgrammableTransaction> PROGRAMMABLE_TRANSACTION_DESERIALIZER = (deserializer) -> new ProgrammableTransaction(
+            deserializer.readVector(CALL_ARG_DESERIALIZER),
+            deserializer.readVector(COMMAND_DESERIALIZER)
+    );
+
+    /**
+     * TransactionKind deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<TransactionKind> TRANSACTION_KIND_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new TransactionKind.ProgrammableTransaction(PROGRAMMABLE_TRANSACTION_DESERIALIZER.deserialize(deserializer));
+            case (byte) 1 -> TransactionKind.ChangeEpoch.INSTANCE;
+            case (byte) 2 -> TransactionKind.Genesis.INSTANCE;
+            case (byte) 3 -> TransactionKind.ConsensusCommitPrologue.INSTANCE;
+            default -> throw new IllegalArgumentException("Unknown TransactionKind type flag: " + flag);
+        };
+    };
+
+    /**
+     * TransactionExpiration deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<TransactionExpiration> TRANSACTION_EXPIRATION_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> TransactionExpiration.None.INSTANCE;
+            case (byte) 1 -> new TransactionExpiration.Epoch(deserializer.readU64());
+            default -> throw new IllegalArgumentException("Unknown TransactionExpiration type flag: " + flag);
+        };
+    };
+
+    /**
+     * TransactionDataV1 deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<TransactionDataV1> TRANSACTION_DATA_V1_DESERIALIZER = (deserializer) -> new TransactionDataV1(
+            TRANSACTION_KIND_DESERIALIZER.deserialize(deserializer),
+            ADDRESS_DESERIALIZER.deserialize(deserializer),
+            GAS_DATA_DESERIALIZER.deserialize(deserializer),
+            TRANSACTION_EXPIRATION_DESERIALIZER.deserialize(deserializer)
+    );
+
+    /**
+     * TransactionData deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<TransactionData> TRANSACTION_DATA_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        if (flag == (byte) 0) {
+            return new TransactionData.V1(TRANSACTION_DATA_V1_DESERIALIZER.deserialize(deserializer));
+        } else {
+            throw new IllegalArgumentException("Unknown TransactionData type flag: " + flag);
+        }
+    };
+
+    /**
+     * IntentScope deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<IntentScope> INTENT_SCOPE_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> IntentScope.TransactionData.INSTANCE;
+            case (byte) 1 -> IntentScope.TransactionEffects.INSTANCE;
+            case (byte) 2 -> IntentScope.CheckpointSummary.INSTANCE;
+            case (byte) 3 -> IntentScope.PersonalMessage.INSTANCE;
+            default -> throw new IllegalArgumentException("Unknown IntentScope type flag: " + flag);
+        };
+    };
+
+    /**
+     * IntentVersion deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<IntentVersion> INTENT_VERSION_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        if (flag == (byte) 0) {
+            return IntentVersion.V0.INSTANCE; // V0 variant
+        } else {
+            throw new IllegalArgumentException("Unknown IntentVersion type flag: " + flag);
+        }
+    };
+
+    /**
+     * AppId deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<AppId> APP_ID_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        if (flag == (byte) 0) {
+            return AppId.Sui.INSTANCE; // V0 variant
+        } else {
+            throw new IllegalArgumentException("Unknown AppId type flag: " + flag);
+        }
+    };
+
+    /**
+     * Intent deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<Intent> INTENT_DESERIALIZER = (deserializer) -> new Intent(
+            INTENT_SCOPE_DESERIALIZER.deserialize(deserializer),
+            INTENT_VERSION_DESERIALIZER.deserialize(deserializer),
+            APP_ID_DESERIALIZER.deserialize(deserializer)
+    );
+
+    /**
+     * IntentMessage deserializer TransactionData
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<IntentMessage<TransactionData>> INTENT_MESSAGE_DESERIALIZER = (deserializer) -> new IntentMessage<>(
+            INTENT_DESERIALIZER.deserialize(deserializer),
+            TRANSACTION_DATA_DESERIALIZER.deserialize(deserializer)
+    );
+
+    /**
+     * IntentMessage deserializer String
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<IntentMessage<String>> INTENT_MESSAGE_STR_DESERIALIZER = (deserializer) -> new IntentMessage<>(
+            INTENT_DESERIALIZER.deserialize(deserializer),
+            deserializer.readString()
+    );
+
+    /**
+     * CompressedSignature deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<CompressedSignature> COMPRESSED_SIGNATURE_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new CompressedSignature.ED25519(deserializer.readBytes());
+            case (byte) 1 -> new CompressedSignature.Secp256k1(deserializer.readBytes());
+            case (byte) 2 -> new CompressedSignature.Secp256r1(deserializer.readBytes());
+            case (byte) 3 -> new CompressedSignature.ZkLogin(deserializer.readBytes());
+            default -> throw new IllegalArgumentException("Unknown CompressedSignature type flag: " + flag);
+        };
+    };
+
+    /**
+     * PublicKey deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<PublicKey> PUBLIC_KEY_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new PublicKey.ED25519(deserializer.readBytes());
+            case (byte) 1 -> new PublicKey.Secp256k1(deserializer.readBytes());
+            case (byte) 2 -> new PublicKey.Secp256r1(deserializer.readBytes());
+            case (byte) 3 -> new PublicKey.ZkLogin(deserializer.readBytes());
+            default -> throw new IllegalArgumentException("Unknown PublicKey type flag: " + flag);
+        };
+    };
+
+    /**
+     * MultiSigPkMap deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<MultiSigPkMap> MULTI_SIG_PK_MAP_DESERIALIZER = (deserializer) -> new MultiSigPkMap(
+            PUBLIC_KEY_DESERIALIZER.deserialize(deserializer),
+            deserializer.readU8()
+    );
+
+    /**
+     * MultiSigPublicKey deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<MultiSigPublicKey> MULTI_SIG_PUBLIC_KEY_DESERIALIZER = (deserializer) -> new MultiSigPublicKey(
+            deserializer.readVector(MULTI_SIG_PK_MAP_DESERIALIZER),
+            deserializer.readU8()
+    );
+
+    /**
+     * MultiSig deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<MultiSig> MULTI_SIG_DESERIALIZER = (deserializer) -> new MultiSig(
+            deserializer.readVector(COMPRESSED_SIGNATURE_DESERIALIZER),
+            deserializer.readU8(),
+            MULTI_SIG_PUBLIC_KEY_DESERIALIZER.deserialize(deserializer)
+    );
+
+    /**
+     * SenderSignedTransaction deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<SenderSignedTransaction> SENDER_SIGNED_TRANSACTION_DESERIALIZER = (deserializer) -> new SenderSignedTransaction(
+            INTENT_MESSAGE_DESERIALIZER.deserialize(deserializer),
+            deserializer.readVector(BcsDeserializer::readBytes)
+    );
+
+    /**
+     * PasskeyAuthenticator deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<PasskeyAuthenticator> PASSKEY_AUTHENTICATOR_DESERIALIZER = (deserializer) -> new PasskeyAuthenticator(
+            deserializer.readBytes(),
+            deserializer.readString(),
+            deserializer.readBytes()
+    );
+
+    /**
+     * Owner deserializer
+     */
+    public static final BcsDeserializer.BcsTypeDeserializer<Owner> OWNER_DESERIALIZER = (deserializer) -> {
+        byte flag = deserializer.readU8();
+        return switch (flag) {
+            case (byte) 0 -> new Owner.AddressOwner(ADDRESS_DESERIALIZER.deserialize(deserializer));
+            case (byte) 1 -> new Owner.ObjectOwner(ADDRESS_DESERIALIZER.deserialize(deserializer));
+            case (byte) 2 -> new Owner.Shared(deserializer.readU64());
+            case (byte) 3 -> Owner.Immutable.INSTANCE;
+            case (byte) 4 -> new Owner.ConsensusV2(new Owner.Authenticator(ADDRESS_DESERIALIZER.deserialize(deserializer)), deserializer.readU64());
+            default -> throw new IllegalArgumentException("Unknown Owner type flag: " + flag);
+        };
+    };
     
     /**
      * Validate if the Sui address is valid.
@@ -590,10 +967,10 @@ public class SuiBcs {
     /**
      * Deserialize object from Base64 string.
      */
-    public static <T> T deserializeFromBase64(String base64, Function<BcsDeserializer, T> deserializer) {
+    public static <T> T deserializeFromBase64(String base64, BcsDeserializer.BcsTypeDeserializer<T> deserializer) throws IOException {
         byte[] data = Base64.decode(base64);
         BcsDeserializer bcsDeserializer = new BcsDeserializer(data);
-        return deserializer.apply(bcsDeserializer);
+        return deserializer.deserialize(bcsDeserializer);
     }
 
     /**
@@ -608,9 +985,9 @@ public class SuiBcs {
     /**
      * Deserialize object from Hex string.
      */
-    public static <T> T deserializeFromHex(String hex, Function<BcsDeserializer, T> deserializer) {
+    public static <T> T deserializeFromHex(String hex, BcsDeserializer.BcsTypeDeserializer<T> deserializer) throws IOException {
         byte[] data = Hex.decode(hex);
         BcsDeserializer bcsDeserializer = new BcsDeserializer(data);
-        return deserializer.apply(bcsDeserializer);
+        return deserializer.deserialize(bcsDeserializer);
     }
 } 

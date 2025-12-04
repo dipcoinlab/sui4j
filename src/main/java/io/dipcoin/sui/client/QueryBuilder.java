@@ -17,6 +17,7 @@ import io.dipcoin.sui.model.Request;
 import io.dipcoin.sui.model.coin.Coin;
 import io.dipcoin.sui.model.coin.PageForCoinAndString;
 import io.dipcoin.sui.model.filter.SuiObjectDataFilter;
+import io.dipcoin.sui.model.move.SuiMoveNormalizedFunction;
 import io.dipcoin.sui.model.move.kind.MoveValue;
 import io.dipcoin.sui.model.move.kind.data.MoveObject;
 import io.dipcoin.sui.model.move.kind.struct.MoveStructMap;
@@ -24,15 +25,19 @@ import io.dipcoin.sui.model.object.*;
 import io.dipcoin.sui.protocol.SuiClient;
 import io.dipcoin.sui.protocol.exceptions.RpcRequestFailedException;
 import io.dipcoin.sui.protocol.http.request.GetCoins;
+import io.dipcoin.sui.protocol.http.request.GetNormalizedMoveFunction;
 import io.dipcoin.sui.protocol.http.request.GetObject;
 import io.dipcoin.sui.protocol.http.request.GetOwnedObjects;
 import io.dipcoin.sui.protocol.http.response.PageForCoinAndStringWrapper;
 import io.dipcoin.sui.protocol.http.response.PageForSuiObjectResponseAndObjectIdWrapper;
+import io.dipcoin.sui.protocol.http.response.SuiMoveNormalizedFunctionWrapper;
 import io.dipcoin.sui.protocol.http.response.SuiObjectResponseWrapper;
 
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -42,6 +47,8 @@ import java.util.stream.Collectors;
  * @Description :
  */
 public class QueryBuilder {
+
+    private static final Map<String, SuiMoveNormalizedFunction> MOVE_FUNCTION_CACHE = new ConcurrentHashMap<>();
 
     private static final String BALANCE = "balance";
 
@@ -312,6 +319,36 @@ public class QueryBuilder {
             }
         }
         return BigInteger.ZERO;
+    }
+
+    /**
+     * get move function
+     * @param suiClient
+     * @param packageId
+     * @param module
+     * @param function
+     * @return
+     */
+    public static SuiMoveNormalizedFunction getMoveFunction(SuiClient suiClient, String packageId, String module, String function) {
+        String key = packageId + module + function;
+        SuiMoveNormalizedFunction suiMoveNormalizedFunction = MOVE_FUNCTION_CACHE.get(key);
+        if (suiMoveNormalizedFunction != null) {
+            return suiMoveNormalizedFunction;
+        }
+        GetNormalizedMoveFunction data = new GetNormalizedMoveFunction();
+        data.setObjectId(packageId);
+        data.setModuleName(module);
+        data.setFunctionName(function);
+        Request<?, SuiMoveNormalizedFunctionWrapper> request = suiClient.getNormalizedMoveFunction(data);
+        SuiMoveNormalizedFunctionWrapper response = null;
+        try {
+            response = request.send();
+        } catch (IOException e) {
+            throw new RpcRequestFailedException("Failed to get normalized move function", e);
+        }
+        SuiMoveNormalizedFunction result = response.getResult();
+        MOVE_FUNCTION_CACHE.put(key, result);
+        return result;
     }
 
 }

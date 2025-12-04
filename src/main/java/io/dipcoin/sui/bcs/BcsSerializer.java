@@ -179,7 +179,7 @@ public class BcsSerializer {
      */
     public BcsSerializer writeUleb128Pure(int length) throws IOException {
         // encode innerLen to ULEB128
-        byte[] innerLenUleb = this.uleb128Encode(length);
+        byte[] innerLenUleb = uleb128Encode(length);
 
         // encode totalLen to ULEB128
         int totalLen = innerLenUleb.length + length;
@@ -217,6 +217,14 @@ public class BcsSerializer {
         byte[] bytes = value.getBytes();
         writeUleb128(bytes.length);
         output.write(bytes);
+        return this;
+    }
+
+    /**
+     * Serialize fixed byte array
+     */
+    public BcsSerializer writeFixedBytes(byte[] value) throws IOException {
+        output.write(value);
         return this;
     }
 

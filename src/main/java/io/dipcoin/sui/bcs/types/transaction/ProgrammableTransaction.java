@@ -35,13 +35,33 @@ public class ProgrammableTransaction {
         this.inputs = new LinkedHashMap<>();
         this.commands = new ArrayList<>();
     }
-    
+
+    public ProgrammableTransaction(LinkedHashMap<CallArg, Integer> inputs, List<Command> commands) {
+        this.inputs = inputs;
+        this.commands = commands;
+    }
+
+    public ProgrammableTransaction(List<CallArg> inputs, List<Command> commands) {
+        this.inputs = new LinkedHashMap<>(inputs.size());
+        this.addInputs(inputs);
+        this.commands = commands;
+    }
+
     public int addInput(CallArg callArg) {
         return this.inputs.computeIfAbsent(callArg, k -> inputs.size());
     }
 
     public void addInputs(LinkedHashMap<CallArg, Integer> callArgs) {
         callArgs.forEach((callArg, integer) -> this.inputs.computeIfAbsent(callArg, k -> inputs.size()));
+    }
+
+    public void updateInputs(LinkedHashMap<CallArg, Integer> callArgs) {
+        this.inputs.clear();
+        this.addInputs(callArgs);
+    }
+
+    public void addInputs(List<CallArg> callArgs) {
+        callArgs.forEach(callArg -> this.inputs.computeIfAbsent(callArg, k -> inputs.size()));
     }
 
     public ProgrammableTransaction addCommand(Command command) {
