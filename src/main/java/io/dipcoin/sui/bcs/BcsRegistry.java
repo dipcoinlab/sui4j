@@ -131,7 +131,7 @@ public class BcsRegistry {
     /**
      * Deserialize object from Base64 string.
      */
-    public static <T> T deserializeFromBase64(String base64, Function<BcsDeserializer, T> deserializer) {
+    public static <T> T deserializeFromBase64(String base64, BcsDeserializer.BcsTypeDeserializer<T> deserializer) throws IOException {
         return SuiBcs.deserializeFromBase64(base64, deserializer);
     }
 
@@ -145,7 +145,7 @@ public class BcsRegistry {
     /**
      * Deserialize object from Hex string.
      */
-    public static <T> T deserializeFromHex(String hex, Function<BcsDeserializer, T> deserializer) {
+    public static <T> T deserializeFromHex(String hex, BcsDeserializer.BcsTypeDeserializer<T> deserializer) throws IOException {
         return SuiBcs.deserializeFromHex(hex, deserializer);
     }
     

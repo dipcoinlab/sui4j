@@ -18,7 +18,6 @@ import io.dipcoin.sui.bcs.types.effects.GasCostSummary;
 import io.dipcoin.sui.bcs.types.effects.TransactionEffects;
 import io.dipcoin.sui.bcs.types.effects.TransactionEffectsV1;
 import io.dipcoin.sui.bcs.types.gas.SuiObjectRef;
-import io.dipcoin.sui.util.Numeric;
 import org.bitcoinj.core.Base58;
 import org.bouncycastle.util.encoders.Base64;
 
@@ -165,7 +164,7 @@ public class EffectsBcs {
      * Deserialize SuiObjectRef.
      */
     private static SuiObjectRef deserializeSuiObjectRef(BcsDeserializer deserializer) throws IOException {
-        String objectId = Numeric.toHexString(deserializer.readAddress());
+        String objectId = SuiBcs.ADDRESS_DESERIALIZER.deserialize(deserializer);
         long version = deserializer.readU64();
         String digest = Base64.toBase64String(deserializer.readBytes());
         

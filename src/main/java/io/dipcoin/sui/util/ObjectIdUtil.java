@@ -14,6 +14,7 @@
 package io.dipcoin.sui.util;
 
 import io.dipcoin.sui.pyth.constant.PythConfig;
+import org.bouncycastle.util.encoders.Hex;
 
 /**
  * @author : Same
@@ -34,7 +35,6 @@ public class ObjectIdUtil {
         String tmp = type.replace(PythConfig.TABLE_ID_PREFIX, "");
         return tmp.replace(PythConfig.TABLE_ID_SUFFIX, "");
     }
-
 
     /**
      * Normalize Sui address
@@ -58,4 +58,14 @@ public class ObjectIdUtil {
 
         return HEX_PREFIX + address;
     }
+
+    /**
+     * Convert to address
+     * @param address
+     * @return
+     */
+    public static String toAddress(byte[] address) {
+        return HEX_PREFIX + Hex.toHexString(address);
+    }
+
 }

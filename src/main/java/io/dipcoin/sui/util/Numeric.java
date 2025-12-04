@@ -285,4 +285,26 @@ public class Numeric {
             throw new IllegalArgumentException("Invalid base58 string: " + base58, e);
         }
     }
+
+    /**
+     * Convert byte array to Base58 string
+     */
+    public static String bytesToBase58(byte[] bytes) {
+        if (bytes == null) {
+            throw new IllegalArgumentException("Input bytes array cannot be null");
+        }
+
+        if (bytes.length == 0) {
+            return "";
+        }
+
+        // Simple Base58 encoding implementation
+        // This uses a simplified implementation, actual projects may require more complete Base58 library
+        try {
+            return Base58.encode(bytes);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error encoding bytes to Base58", e);
+        }
+    }
+
 }
