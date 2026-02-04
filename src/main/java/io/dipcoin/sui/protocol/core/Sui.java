@@ -140,11 +140,23 @@ public interface Sui {
     Request<?, ChainIdentifier> getChainIdentifier();
 
     /**
+     * Return the sequence number of the latest checkpoint that has been executed
+     * @return
+     */
+    Request<?, CheckpointSequenceNumberWrapper> getLatestCheckpointSequenceNumber();
+
+    /**
      * Return object information for specified object
      * @param request
      * @return
      */
     Request<?, SuiObjectResponseWrapper> getObject(GetObject request);
+
+    /**
+     * Return the total number of transaction blocks known to the server
+     * @return
+     */
+    Request<?, TotalTransactionBlocksWrapper> getTotalTransactionBlocks();
 
     /**
      * Return object data of object list

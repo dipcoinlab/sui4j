@@ -589,6 +589,52 @@ public class SuiClientTest extends DeserializerTest{
                 .isLessThan(new BigInteger("ffffffff", 16)); // Example upper limit.
     }
 
+    @Test
+    @Tag("suite")
+    void testGetLatestCheckpointSequenceNumber() throws IOException {
+
+        // execution test
+        Request<?, CheckpointSequenceNumberWrapper> request = suiClient.getLatestCheckpointSequenceNumber();
+        CheckpointSequenceNumberWrapper response = request.send();
+
+        System.out.println("CheckpointSequenceNumber : " + response.getCheckpointSequenceNumber());
+
+        // Verify the result format (Hex string)
+        assertThat(response.getResult())
+                .as("CheckpointSequenceNumber should be a string.")
+                .matches("^[0-9]+$")
+                .hasSizeGreaterThan(0); // Adjust length validation based on actual requirements.
+
+        // Verify the result format (numeric)
+        assertThat(response.getCheckpointSequenceNumber())
+                .as("Converted numerical value.")
+                .isGreaterThan(BigInteger.ZERO) // Must be a positive number
+                .isLessThan(new BigInteger("ffffffff", 16)); // Example upper limit.
+    }
+
+    @Test
+    @Tag("suite")
+    void testGetTotalTransactionBlocks() throws IOException {
+
+        // execution test
+        Request<?, TotalTransactionBlocksWrapper> request = suiClient.getTotalTransactionBlocks();
+        TotalTransactionBlocksWrapper response = request.send();
+
+        System.out.println("TotalTransactionBlocks : " + response.getTotalTransactionBlocks());
+
+        // Verify the result format (Hex string)
+        assertThat(response.getResult())
+                .as("TotalTransactionBlocks should be a string.")
+                .matches("^[0-9]+$")
+                .hasSizeGreaterThan(0); // Adjust length validation based on actual requirements.
+
+        // Verify the result format (numeric)
+        assertThat(response.getTotalTransactionBlocks())
+                .as("Converted numerical value.")
+                .isGreaterThan(BigInteger.ZERO) // Must be a positive number
+                .isLessThan(new BigInteger("ffffffff", 16)); // Example upper limit.
+    }
+
     // --------------------- Transaction Builder API ---------------------
 
     @Test
