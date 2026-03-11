@@ -36,14 +36,14 @@ Sui4J is a Java SDK designed specifically for the Sui blockchain, providing comp
 <dependency>
     <groupId>io.dipcoin</groupId>
     <artifactId>sui4j</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4</version>
 </dependency>
 ```
 
 ### 🎯 Gradle Dependency
 
 ```gradle
-implementation 'io.dipcoin:sui4j:0.1.3'
+implementation 'io.dipcoin:sui4j:0.1.4'
 ```
 
 ## 🎯 Basic Usage
