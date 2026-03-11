@@ -13,6 +13,8 @@
 
 package io.dipcoin.sui.crypto;
 
+import io.dipcoin.sui.bcs.BcsRegistry;
+import io.dipcoin.sui.bcs.types.intent.IntentScope;
 import io.dipcoin.sui.crypto.exceptions.MnemonicsException;
 import io.dipcoin.sui.crypto.exceptions.SigningException;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
@@ -23,6 +25,8 @@ import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import org.bouncycastle.crypto.signers.Ed25519Signer;
 import org.bouncycastle.util.encoders.Hex;
+
+import java.io.IOException;
 
 /**
  * @author : Same
@@ -150,6 +154,59 @@ public class Ed25519KeyPair extends SuiKeyPair<AsymmetricCipherKeyPair> {
         Ed25519PublicKeyParameters publicKey = privateKey.generatePublicKey();
 
         return new Ed25519KeyPair(privateKey, publicKey);
+    }
+
+    /**
+     * Verify personal message signature by public key
+     *
+     * @param message message
+     * @param signature signature
+     * @param publicKey publicKey
+     * @return
+     */
+    public static boolean verifyPersonalMessage(byte[] message, byte[] signature, byte[] publicKey) throws IOException {
+        byte[] serialized = BcsRegistry.serializeToBytes(message, BcsRegistry.BYTE_ARRAY_SERIALIZER);
+        return verifyWithIntent(serialized, signature, publicKey, IntentScope.PersonalMessage.INSTANCE);
+    }
+
+    /**
+     * Verify intent message signature by public key
+     *
+     * @param message message
+     * @param signature signature
+     * @param publicKey publicKey
+     * @param intentScope intentScope
+     * @return
+     */
+    public static boolean verifyWithIntent(byte[] message, byte[] signature, byte[] publicKey, IntentScope intentScope) {
+        // intent || message
+        byte[] intent = intentScope.getScope();
+
+        byte[] intentMsg = new byte[intent.length + message.length];
+
+        System.arraycopy(intent, 0, intentMsg, 0, intent.length);
+        System.arraycopy(message, 0, intentMsg, intent.length, message.length);
+
+        byte[] digest = blake2b256(intentMsg);
+        return verify(digest, signature, publicKey);
+    }
+
+    /**
+     * Verify signature by public key
+     *
+     * @param msg message digest
+     * @param signature signature
+     * @param publicKey publicKey
+     * @return
+     */
+    public static boolean verify(byte[] msg, byte[] signature, byte[] publicKey) {
+        Ed25519PublicKeyParameters pubKey = new Ed25519PublicKeyParameters(publicKey, 0);
+
+        Signer verifier = new Ed25519Signer();
+        verifier.init(false, pubKey);
+        verifier.update(msg, 0, msg.length);
+
+        return verifier.verifySignature(signature);
     }
 
     /**

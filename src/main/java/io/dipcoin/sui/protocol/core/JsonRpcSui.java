@@ -210,12 +210,30 @@ public class JsonRpcSui implements SuiClient {
     }
 
     @Override
+    public Request<?, CheckpointSequenceNumberWrapper> getLatestCheckpointSequenceNumber() {
+        return new Request<>(
+                "sui_getLatestCheckpointSequenceNumber",
+                Collections.<String>emptyList(),
+                suiService,
+                CheckpointSequenceNumberWrapper.class);
+    }
+
+    @Override
     public Request<?, SuiObjectResponseWrapper> getObject(GetObject request) {
         return new Request<>(
                 "sui_getObject",
                 Arrays.asList(request.getObjectId(), request.getOptions()),
                 suiService,
                 SuiObjectResponseWrapper.class);
+    }
+
+    @Override
+    public Request<?, TotalTransactionBlocksWrapper> getTotalTransactionBlocks() {
+        return new Request<>(
+                "sui_getTotalTransactionBlocks",
+                Collections.<String>emptyList(),
+                suiService,
+                TotalTransactionBlocksWrapper.class);
     }
 
     @Override

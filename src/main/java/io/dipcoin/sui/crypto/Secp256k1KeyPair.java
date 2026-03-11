@@ -13,6 +13,8 @@
 
 package io.dipcoin.sui.crypto;
 
+import io.dipcoin.sui.bcs.BcsRegistry;
+import io.dipcoin.sui.bcs.types.intent.IntentScope;
 import io.dipcoin.sui.crypto.exceptions.MnemonicsException;
 import io.dipcoin.sui.crypto.exceptions.SigningException;
 import io.dipcoin.sui.crypto.signature.SignatureScheme;
@@ -25,6 +27,8 @@ import org.bitcoinj.wallet.DeterministicKeyChain;
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bouncycastle.util.encoders.Hex;
 
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
@@ -127,6 +131,74 @@ public class Secp256k1KeyPair extends SuiKeyPair<ECKey> {
             return new Secp256k1KeyPair(key.getPrivKeyBytes());
         } catch (Exception e) {
             throw new MnemonicsException("Failed to derive Secp256k1 keypair", e);
+        }
+    }
+
+    /**
+     * Verify personal message signature by public key
+     *
+     * @param message message
+     * @param signature signature
+     * @param publicKey publicKey
+     * @return
+     */
+    public static boolean verifyPersonalMessage(byte[] message, byte[] signature, byte[] publicKey) throws IOException {
+        byte[] serialized = BcsRegistry.serializeToBytes(message, BcsRegistry.BYTE_ARRAY_SERIALIZER);
+        return verifyWithIntent(serialized, signature, publicKey, IntentScope.PersonalMessage.INSTANCE);
+    }
+
+    /**
+     * Verify intent message signature by public key
+     *
+     * @param message message
+     * @param signature signature
+     * @param publicKey publicKey
+     * @param intentScope intentScope
+     * @return
+     */
+    public static boolean verifyWithIntent(byte[] message, byte[] signature, byte[] publicKey, IntentScope intentScope) {
+        // intent || message
+        byte[] intent = intentScope.getScope();
+
+        byte[] intentMsg = new byte[intent.length + message.length];
+
+        System.arraycopy(intent, 0, intentMsg, 0, intent.length);
+        System.arraycopy(message, 0, intentMsg, intent.length, message.length);
+
+        byte[] digest = blake2b256(intentMsg);
+        return verify(digest, signature, publicKey);
+    }
+
+    /**
+     * Verify signature by public key
+     *
+     * @param msg message digest
+     * @param signature 64 bytes R||S
+     * @param publicKey public key
+     * @return
+     */
+    public static boolean verify(byte[] msg, byte[] signature, byte[] publicKey) {
+        if (signature.length != 64) {
+            return false;
+        }
+
+        try {
+
+            byte[] rBytes = Arrays.copyOfRange(signature, 0, 32);
+            byte[] sBytes = Arrays.copyOfRange(signature, 32, 64);
+
+            BigInteger r = new BigInteger(1, rBytes);
+            BigInteger s = new BigInteger(1, sBytes);
+
+            ECKey.ECDSASignature sig = new ECKey.ECDSASignature(r, s);
+
+            Sha256Hash sha256Hash = Sha256Hash.of(msg);
+
+            ECKey key = ECKey.fromPublicOnly(publicKey);
+
+            return key.verify(sha256Hash, sig);
+        } catch (Exception e) {
+            return false;
         }
     }
 
