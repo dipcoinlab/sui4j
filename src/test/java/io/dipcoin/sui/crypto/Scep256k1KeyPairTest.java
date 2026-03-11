@@ -14,8 +14,12 @@
 package io.dipcoin.sui.crypto;
 
 import org.bitcoinj.core.ECKey;
+import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -136,10 +140,32 @@ public class Scep256k1KeyPairTest {
         // When
         byte[] signature = keyPair.sign(message);
 
+        System.out.println("Secp256k1 signature : " + Base64.toBase64String(signature));
+
         // Then
         assertThat(signature)
                 .hasSize(64) // R(32) + S(32)
                 .isNotEqualTo(message); // The signature should differ from the original message.
+    }
+
+    @Test
+    void verifySignature() throws IOException {
+        // Given
+        Secp256k1KeyPair keyPair = new Secp256k1KeyPair(VALID_HEX_KEY);
+        byte[] message = TEST_MESSAGE.getBytes(StandardCharsets.UTF_8);
+
+        // When
+        byte[] signature = keyPair.signSignaturePersonalMessage(message);
+        String signatureContent = Hex.toHexString(signature);
+        System.out.println("Secp256k1 signature : " + signatureContent);
+
+        // verify signature
+        boolean verified = Secp256k1KeyPair.verifyPersonalMessage(message, signature, keyPair.publicKeyBytes());
+        System.out.println("Secp256k1 verified : " + verified);
+
+        // Then
+        assertThat(verified) // Secp256k1 signature is verified.
+                .isTrue();
     }
 
 //    @Test

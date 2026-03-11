@@ -20,6 +20,9 @@ import org.bouncycastle.util.encoders.Base64;
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -166,16 +169,38 @@ public class Ed25519KeyPairTest {
     @Test
     void sign_shouldGenerateValidSignature() {
         // Given
-        Ed25519KeyPair keyPair = (Ed25519KeyPair) Ed25519KeyPair.decodeHex(VALID_BASE64_KEY);
+        Ed25519KeyPair keyPair = Ed25519KeyPair.decodeHex(VALID_BASE64_KEY);
         byte[] message = TEST_MESSAGE.getBytes();
 
         // When
         byte[] signature = keyPair.sign(message);
 
+        System.out.println("Ed25519 signature : " + Base64.toBase64String(signature));
+
         // Then
         assertThat(signature)
                 .hasSize(64) // Ed25519 signature is fixed at 64 bytes.
                 .isNotEqualTo(message); // The signature should differ from the original message.
+    }
+
+    @Test
+    void verifySignature() throws IOException {
+        // Given
+        Ed25519KeyPair keyPair = Ed25519KeyPair.decodeHex(VALID_BASE64_KEY);
+        byte[] message = TEST_MESSAGE.getBytes(StandardCharsets.UTF_8);
+
+        // When
+        byte[] signature = keyPair.signSignaturePersonalMessage(message);
+        String signatureContent = Hex.toHexString(signature);
+        System.out.println("Ed25519 signature : " + signatureContent);
+
+        // verify signature
+        boolean verified = Ed25519KeyPair.verifyPersonalMessage(message, signature, keyPair.publicKeyBytes());
+        System.out.println("Ed25519 verified : " + verified);
+
+        // Then
+        assertThat(verified) // Ed25519 signature is verified.
+                .isTrue();
     }
 
 //    @Test

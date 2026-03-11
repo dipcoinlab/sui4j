@@ -283,7 +283,6 @@ public abstract class SuiKeyPair<T> {
      */
     public abstract byte[] sign(byte[] msg) throws SigningException;
 
-
     /**
      * blake2b256 summary
      * @param message
@@ -400,6 +399,47 @@ public abstract class SuiKeyPair<T> {
             case ED25519 -> {return new Ed25519KeyPair(secretKey);}
             case SECP256K1 -> {return new Secp256k1KeyPair(secretKey);}
             default -> throw new SignatureSchemeNotSupportedException();
+        }
+    }
+
+    /**
+     * Verify signature
+     * @param message
+     * @param signatureBytes
+     * @param intentScope
+     * @return
+     */
+    public static boolean verifySignature(byte[] message, byte[] signatureBytes, IntentScope intentScope) {
+        try {
+            byte flag = signatureBytes[0];
+            SignatureScheme scheme = SignatureScheme.findByScheme(flag);
+
+            if (scheme == null) {
+                return false;
+            }
+
+            int sigLength = 64;
+            byte[] signature = Arrays.copyOfRange(signatureBytes, 1, 1 + sigLength);
+            byte[] pubkey = Arrays.copyOfRange(signatureBytes, 1 + sigLength, signatureBytes.length);
+
+            // intent || message
+            byte[] intent = intentScope.getScope();
+
+            byte[] intentMsg = new byte[intent.length + message.length];
+
+            System.arraycopy(intent, 0, intentMsg, 0, intent.length);
+            System.arraycopy(message, 0, intentMsg, intent.length, message.length);
+
+            byte[] digest = blake2b256(intentMsg);
+
+            return switch (scheme) {
+                case ED25519 -> Ed25519KeyPair.verify(digest, signature, pubkey);
+                case SECP256K1 -> Secp256k1KeyPair.verify(digest, signature, pubkey);
+                default -> false;
+            };
+
+        } catch (Exception e) {
+            return false;
         }
     }
 

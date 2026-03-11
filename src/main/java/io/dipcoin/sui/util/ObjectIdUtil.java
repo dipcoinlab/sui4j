@@ -13,7 +13,9 @@
 
 package io.dipcoin.sui.util;
 
+import io.dipcoin.sui.crypto.signature.SignatureScheme;
 import io.dipcoin.sui.pyth.constant.PythConfig;
+import org.bouncycastle.jcajce.provider.digest.Blake2b;
 import org.bouncycastle.util.encoders.Hex;
 
 /**
@@ -66,6 +68,26 @@ public class ObjectIdUtil {
      */
     public static String toAddress(byte[] address) {
         return HEX_PREFIX + Hex.toHexString(address);
+    }
+
+    /**
+     * Convert public key to address
+     * @param pubKey
+     * @param scheme
+     * @return
+     */
+    public static String toAddress(byte[] pubKey, SignatureScheme scheme) {
+        // 1. splice flag + pubkey
+        byte[] flagAndPubkey = new byte[1 + pubKey.length];
+        flagAndPubkey[0] = scheme.getScheme(); // flag
+        System.arraycopy(pubKey, 0, flagAndPubkey, 1, pubKey.length);
+
+        // 2. Blake2b-256 generate address
+        Blake2b.Blake2b256 blake2b256 = new Blake2b.Blake2b256();
+        blake2b256.update(flagAndPubkey, 0, flagAndPubkey.length);
+        byte[] addressBytes = blake2b256.digest();
+
+        return HEX_PREFIX + Hex.toHexString(addressBytes);
     }
 
 }
