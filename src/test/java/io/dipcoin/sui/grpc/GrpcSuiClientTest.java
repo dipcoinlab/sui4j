@@ -22,6 +22,8 @@ import io.dipcoin.sui.crypto.SuiKeyPair;
 import io.dipcoin.sui.protocol.IntervalExtension;
 import io.dipcoin.sui.protocol.grpc.GrpcOptions;
 import io.dipcoin.sui.protocol.grpc.GrpcSuiClient;
+import io.dipcoin.sui.protocol.grpc.exceptions.GrpcCallException;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -49,9 +51,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -1104,6 +1104,78 @@ public class GrpcSuiClientTest {
                 .isGreaterThanOrEqualTo(targetCount);
     }
 
+    @Test
+    @Tag("suite")
+    void testSubscribeCheckpointsAndQueryTxs() throws Exception {
+        int targetCount = 10;
+        BlockingQueue<Long> queue = new LinkedBlockingQueue<>();
+        AtomicInteger received = new AtomicInteger(0);
+        AtomicReference<Throwable> streamError = new AtomicReference<>();
+        AtomicReference<Long> prevCursor = new AtomicReference<>(-1L);
+        FieldMask checkpointMask = FieldMask.newBuilder()
+                .addPaths("sequence_number")
+                .addPaths("digest")
+                .addPaths("transactions.events.events")
+                .build();
+
+        SubscribeCheckpointsRequest request = SubscribeCheckpointsRequest.newBuilder()
+                .setReadMask(FieldMask.newBuilder().addPaths("cursor").build())
+                .build();
+
+        grpcClient.subscribeCheckpoints(request, new StreamObserver<>() {
+            @Override
+            public void onNext(SubscribeCheckpointsResponse response) {
+                log.info("testSubscribeCheckpoints response = {}", response);
+                long cursor = response.getCursor();
+                queue.offer(cursor);
+
+                long prev = prevCursor.getAndSet(cursor);
+                int count = received.incrementAndGet();
+                log.info("testSubscribeCheckpoints stream item #{} cursor={}", count, cursor);
+
+                assertThat(cursor)
+                        .as("Checkpoint cursor must be strictly increasing")
+                        .isGreaterThan(prev);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                log.warn("testSubscribeCheckpoints stream error: {}", t.getMessage(), t);
+                streamError.set(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                log.info("testSubscribeCheckpoints stream completed");
+            }
+        });
+
+        for (int i = 0; i < targetCount; i++) {
+            Long cursor = queue.poll(120, TimeUnit.SECONDS);
+            assertThat(cursor)
+                    .as("Should receive checkpoint cursor %d/%d within timeout", i + 1, targetCount)
+                    .isNotNull();
+
+            GetCheckpointResponse checkpoint = getCheckpointWhenReady(cursor, checkpointMask);
+            log.info("cursor[{}] getCheckpoint = {}",
+                    cursor,
+                    checkpoint.getCheckpoint());
+
+            assertThat(checkpoint.hasCheckpoint()).isTrue();
+            assertThat(checkpoint.getCheckpoint().getSequenceNumber())
+                    .as("GetCheckpoint sequence must match subscription cursor")
+                    .isEqualTo(cursor);
+            assertThat(checkpoint.getCheckpoint().getDigest()).isNotBlank();
+        }
+
+        assertThat(streamError.get())
+                .as("Checkpoint stream must not emit an error before subscription close")
+                .isNull();
+        assertThat(received.get())
+                .as("Stream should have delivered at least the processed checkpoints")
+                .isGreaterThanOrEqualTo(targetCount);
+    }
+
     /**
      * Subscribe to the checkpoint stream and scan for events emitted by a specific Move module.
      *
@@ -1122,8 +1194,8 @@ public class GrpcSuiClientTest {
     @Tag("suite")
     void testSubscribeEvent() throws InterruptedException {
         String targetPackageId =
-                "0x5306f64e312b581766351c07af79c72fcb1cd25147157fdc2f8ad76de9a3fb6a";
-        String targetModule = "vaa";
+                "0x04e20ddf36af412a4096f9014f4a565af9e812db9a05cc40254846cf6ed0ad91";
+        String targetModule = "event";
 
         int maxCheckpoints = 5000;
         CountDownLatch latch = new CountDownLatch(maxCheckpoints);
@@ -1326,6 +1398,37 @@ public class GrpcSuiClientTest {
         // The metadata map returned must be unmodifiable
         assertThat(options.getMetadata())
                 .isUnmodifiable();
+    }
+
+    /**
+     * The checkpoint subscription can deliver a {@code cursor} before the same fullnode serves
+     * that sequence from {@link GrpcSuiClient#getCheckpoint} (NOT_FOUND until execution catches
+     * up — not a disk flush issue, just API visibility lag on one process).
+     */
+    private GetCheckpointResponse getCheckpointWhenReady(long sequenceNumber, FieldMask readMask)
+            throws InterruptedException {
+        final long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(90);
+        long backoffMs = 25;
+        while (true) {
+            GetCheckpointRequest req = GetCheckpointRequest.newBuilder()
+                    .setSequenceNumber(sequenceNumber)
+                    .setReadMask(readMask)
+                    .build();
+            try {
+                return grpcClient.getCheckpoint(req);
+            } catch (GrpcCallException e) {
+                if (e.getStatus().getCode() != Status.Code.NOT_FOUND
+                        || System.nanoTime() >= deadlineNanos) {
+                    throw e;
+                }
+                log.debug(
+                        "GetCheckpoint NOT_FOUND for seq={}; subscription ahead of ledger, retry in {}ms",
+                        sequenceNumber,
+                        backoffMs);
+                Thread.sleep(backoffMs);
+                backoffMs = Math.min(backoffMs * 2, 2000);
+            }
+        }
     }
     
 }
