@@ -6,7 +6,7 @@
 
     <groupId>io.dipcoin</groupId>
     <artifactId>sui4j</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
     <name>sui4j</name>
     <description>A Sui SDK designed for building maintainable, high-performance Java servers.</description>
     <url>https://github.com/dipcoinlab/sui4j</url>
@@ -47,6 +47,9 @@
 
         <bouncycastle.version>1.70</bouncycastle.version>
         <bitcoinj.version>0.16.1</bitcoinj.version>
+        <sui4j-grpc-proto.version>1.0.0</sui4j-grpc-proto.version>
+        <protobuf.version>3.25.3</protobuf.version>
+        <grpc.version>1.62.2</grpc.version>
 
         <!-- Test -->
         <junit.version>5.9.2</junit.version>
@@ -125,6 +128,52 @@
             <groupId>org.bitcoinj</groupId>
             <artifactId>bitcoinj-core</artifactId>
             <version>${bitcoinj.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-javalite</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- sui4j-grpc-proto -->
+        <dependency>
+            <groupId>io.dipcoin</groupId>
+            <artifactId>sui4j-grpc-proto</artifactId>
+            <version>${sui4j-grpc-proto.version}</version>
+        </dependency>
+
+        <!-- grpc -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <!-- Google common protos (com.google.rpc.Status, etc.) -->
+        <dependency>
+            <groupId>com.google.api.grpc</groupId>
+            <artifactId>proto-google-common-protos</artifactId>
+            <version>2.29.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
         </dependency>
 
         <!-- Test -->

@@ -15,15 +15,15 @@ package io.dipcoin.sui.protocol.exceptions;
 
 /**
  * @author : Same
- * @datetime : 2025/7/5 00:30
- * @Description : json RPC send failure exception
+ * @datetime : 2026/3/6 16:29
+ * @Description : gRPC send failure exception
  */
-public class RpcRequestFailedException extends RuntimeException{
-    public RpcRequestFailedException(String message) {
+public class GrpcRequestFailedException extends RuntimeException{
+    public GrpcRequestFailedException(String message) {
         super(message);
     }
 
-    public RpcRequestFailedException(String message, Throwable cause) {
+    public GrpcRequestFailedException(String message, Throwable cause) {
         super(message, cause);
     }
 }
