@@ -27,16 +27,8 @@ import java.security.NoSuchAlgorithmException;
  */
 public class HashUtil {
 
-    private static final MessageDigest digest;
+    private static final String SHA_256 = "SHA-256";
     private static final Charset UTF8 = StandardCharsets.UTF_8;
-
-    static {
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     /**
      * Get sha256 result
@@ -44,7 +36,11 @@ public class HashUtil {
      * @return
      */
     public static byte[] sha256(byte[] message) {
-        return digest.digest(message);
+        try {
+            return MessageDigest.getInstance(SHA_256).digest(message);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
