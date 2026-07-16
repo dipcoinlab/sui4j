@@ -95,6 +95,9 @@ public class SuiBcs {
      * ObjectArg serializer
      */
     public static final BcsSerializer.BcsTypeSerializer<ObjectArg> OBJECT_ARG_SERIALIZER = (serializer, arg) -> {
+        if (arg == null) {
+            throw new IllegalArgumentException("ObjectArg must not be null: object reference is missing, please check whether the object has been synced and registered");
+        }
         if (arg instanceof ObjectArgImmOrOwnedObject) {
             serializer.writeU8((byte) 0); // ImmOrOwnedObject variant
             SUI_OBJECT_REF_SERIALIZER.serialize(serializer, ((ObjectArgImmOrOwnedObject) arg).getObjectRef());
@@ -113,6 +116,13 @@ public class SuiBcs {
      * CallArg serializer
      */
     public static final BcsSerializer.BcsTypeSerializer<CallArg> CALL_ARG_SERIALIZER = (serializer, arg) -> {
+        if (arg == null) {
+            // A null CallArg in the PTB inputs usually means the upper layer is missing a shared/owned
+            // object reference (e.g. an un-synced PriceFeed, Perpetual, cap, etc.) yet still called
+            // addInput(null). Fail fast with a clear message here to avoid the later arg.getClass()
+            // throwing the meaningless "Cannot invoke \"Object.getClass()\" because \"arg\" is null".
+            throw new IllegalArgumentException("CallArg must not be null: PTB input is missing an object reference, please check whether the corresponding shared/owned object has been synced and registered");
+        }
         if (arg instanceof CallArgPure) {
             serializer.writeU8((byte) 0); // Pure variant
             CallArgPure pure = (CallArgPure) arg;
@@ -142,6 +152,9 @@ public class SuiBcs {
      * serialize ObjectArg
      */
     private static void serializeObjectArg(BcsSerializer serializer, ObjectArg arg) throws IOException {
+        if (arg == null) {
+            throw new IllegalArgumentException("ObjectArg must not be null: object reference is missing, please check whether the object has been synced and registered");
+        }
         if (arg instanceof ObjectArgImmOrOwnedObject) {
             serializer.writeU8((byte) 0); // ImmOrOwnedObject variant
             SUI_OBJECT_REF_SERIALIZER.serialize(serializer, ((ObjectArgImmOrOwnedObject) arg).getObjectRef());
@@ -227,6 +240,9 @@ public class SuiBcs {
      * Argument serializer
      */
     public static final BcsSerializer.BcsTypeSerializer<Argument> ARGUMENT_SERIALIZER = (serializer, arg) -> {
+        if (arg == null) {
+            throw new IllegalArgumentException("Argument must not be null: PTB command argument is missing, please check the moveCall argument assembly");
+        }
         if (arg instanceof Argument.GasCoin) {
             serializer.writeU8((byte) 0); // GasCoin variant
         } else if (arg instanceof Argument.Input) {
