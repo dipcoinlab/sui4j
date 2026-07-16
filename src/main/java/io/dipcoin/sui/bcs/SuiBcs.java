@@ -14,6 +14,7 @@
 package io.dipcoin.sui.bcs;
 
 import io.dipcoin.sui.bcs.types.arg.call.CallArg;
+import io.dipcoin.sui.bcs.types.arg.call.CallArgFundsWithdrawal;
 import io.dipcoin.sui.bcs.types.arg.call.CallArgObjectArg;
 import io.dipcoin.sui.bcs.types.arg.call.CallArgPure;
 import io.dipcoin.sui.bcs.types.arg.object.*;
@@ -121,6 +122,17 @@ public class SuiBcs {
             serializer.writeU8((byte) 1); // Object variant
             CallArgObjectArg objArg = (CallArgObjectArg) arg;
             serializeObjectArg(serializer, objArg.getObjectArg());
+        } else if (arg instanceof CallArgFundsWithdrawal) {
+            serializer.writeU8((byte) 2); // FundsWithdrawal variant (SIP-58 address balance withdrawal)
+            CallArgFundsWithdrawal fw = (CallArgFundsWithdrawal) arg;
+            // reservation: Reservation::MaxAmountU64(u64) -- enum variant 0 + u64
+            serializer.writeU8((byte) 0);
+            serializer.writeU64(fw.getAmount());
+            // type_arg: WithdrawalTypeArg::Balance(TypeTag) -- enum variant 0 + TypeTag (the type parameter T of Balance)
+            serializer.writeU8((byte) 0);
+            serializeTypeTag(serializer, fw.getBalanceType());
+            // withdraw_from: WithdrawFrom::Sender(0) / Sponsor(1)
+            serializer.writeU8(fw.isFromSponsor() ? (byte) 1 : (byte) 0);
         } else {
             throw new IllegalArgumentException("Unknown CallArg type: " + arg.getClass());
         }
@@ -329,6 +341,17 @@ public class SuiBcs {
         } else if (expiration instanceof TransactionExpiration.Epoch) {
             serializer.writeU8((byte) 1); // Epoch variant
             serializer.writeU64(((TransactionExpiration.Epoch) expiration).getEpoch());
+        } else if (expiration instanceof TransactionExpiration.ValidDuring validDuring) {
+            serializer.writeU8((byte) 2); // ValidDuring variant (SIP-58 address balance gas payment)
+            // Option<u64> minEpoch / maxEpoch / minTimestamp / maxTimestamp
+            serializer.writeOption(validDuring.getMinEpoch(), (s, v) -> s.writeU64(v));
+            serializer.writeOption(validDuring.getMaxEpoch(), (s, v) -> s.writeU64(v));
+            serializer.writeOption(validDuring.getMinTimestamp(), (s, v) -> s.writeU64(v));
+            serializer.writeOption(validDuring.getMaxTimestamp(), (s, v) -> s.writeU64(v));
+            // ObjectDigest chain (uleb length prefix + 32-byte genesis checkpoint digest)
+            OBJECT_DIGEST_SERIALIZER.serialize(serializer, validDuring.getChain());
+            // u32 nonce
+            serializer.writeU32(validDuring.getNonce());
         } else {
             throw new IllegalArgumentException("Unknown TransactionExpiration type: " + expiration.getClass());
         }
@@ -739,6 +762,14 @@ public class SuiBcs {
         return switch (flag) {
             case (byte) 0 -> TransactionExpiration.None.INSTANCE;
             case (byte) 1 -> new TransactionExpiration.Epoch(deserializer.readU64());
+            case (byte) 2 -> new TransactionExpiration.ValidDuring(
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    OBJECT_DIGEST_DESERIALIZER.deserialize(deserializer),
+                    deserializer.readU32()
+            );
             default -> throw new IllegalArgumentException("Unknown TransactionExpiration type flag: " + flag);
         };
     };
