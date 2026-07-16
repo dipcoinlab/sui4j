@@ -620,9 +620,36 @@ public class SuiBcs {
         return switch (flag) {
             case (byte) 0 -> new CallArgPure(deserializer.readBytes());
             case (byte) 1 -> deserializeObjectArg(deserializer);
+            case (byte) 2 -> deserializeFundsWithdrawal(deserializer);
             default -> throw new IllegalArgumentException("Unknown CallArg flag: " + flag);
         };
     };
+
+    /**
+     * deserialize FundsWithdrawal (SIP-58 address balance withdrawal, the 3rd CallArg variant)
+     */
+    public static CallArgFundsWithdrawal deserializeFundsWithdrawal(BcsDeserializer deserializer) throws IOException {
+        // reservation: Reservation::MaxAmountU64(u64) -- enum variant 0 + u64
+        byte reservationFlag = deserializer.readU8();
+        if (reservationFlag != (byte) 0) {
+            throw new IllegalArgumentException("Unknown Reservation flag: " + reservationFlag);
+        }
+        long amount = deserializer.readU64();
+        // type_arg: WithdrawalTypeArg::Balance(TypeTag) -- enum variant 0 + TypeTag (the type parameter T of Balance)
+        byte typeArgFlag = deserializer.readU8();
+        if (typeArgFlag != (byte) 0) {
+            throw new IllegalArgumentException("Unknown WithdrawalTypeArg flag: " + typeArgFlag);
+        }
+        TypeTag balanceType = TYPE_TAG_DESERIALIZER.deserialize(deserializer);
+        // withdraw_from: WithdrawFrom::Sender(0) / Sponsor(1)
+        byte fromFlag = deserializer.readU8();
+        boolean fromSponsor = switch (fromFlag) {
+            case (byte) 0 -> false;
+            case (byte) 1 -> true;
+            default -> throw new IllegalArgumentException("Unknown WithdrawFrom flag: " + fromFlag);
+        };
+        return new CallArgFundsWithdrawal(amount, balanceType, fromSponsor);
+    }
 
     /**
      * deserialize ObjectArg
@@ -735,7 +762,7 @@ public class SuiBcs {
     /**
      * ProgrammableTransaction deserializer
      */
-    public static final BcsDeserializer.BcsTypeDeserializer<ProgrammableTransaction> PROGRAMMABLE_TRANSACTION_DESERIALIZER = (deserializer) -> new ProgrammableTransaction(
+    public static final BcsDeserializer.BcsTypeDeserializer<ProgrammableTransaction> PROGRAMMABLE_TRANSACTION_DESERIALIZER = (deserializer) -> new DecodedProgrammableTransaction(
             deserializer.readVector(CALL_ARG_DESERIALIZER),
             deserializer.readVector(COMMAND_DESERIALIZER)
     );
