@@ -29,9 +29,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -235,7 +233,6 @@ public class PureBcs {
      */
     public static void resolvePureArgsTypes(ProgrammableTransaction programmableTx, SuiClient suiClient) {
         List<Command> commands = programmableTx.getCommands();
-        LinkedHashMap<CallArg, Integer> inputs = programmableTx.getInputs();
         if (commands != null && !commands.isEmpty()) {
             for (Command command : commands) {
                 if (command instanceof Command.MoveCall moveCall) {
@@ -253,20 +250,14 @@ public class PureBcs {
                             } else if (suiMoveNormalizedType instanceof VectorType vectorType) {
                                 type = "vector_" + vectorType.getVector().getType();
                             }
-                            if (type != null) {
-                                Argument.Input input = (Argument.Input) arguments.get(i);
+                            if (type != null && arguments.get(i) instanceof Argument.Input input) {
                                 int finalIndex = input.getIndex();
-                                CallArg callArg = inputs.entrySet().stream()
-                                        .filter(e -> e.getValue() == finalIndex)
-                                        .map(Map.Entry::getKey)
-                                        .findFirst()
-                                        .orElse(null);
-                                if (callArg != null) {
+                                CallArg callArg = programmableTx.getInputByIndex(finalIndex);
+                                if (callArg instanceof CallArgPure pure) {
                                     try {
-                                    CallArgPure pure = (CallArgPure) callArg;
-                                    Object arg = PureBcs.deserializeFromBytes(type, pure.getRawBytes());
-                                    pure.setArg(arg);
-                                    pure.setBasePureType(BasePureType.valueOf(type.toUpperCase()));
+                                        Object arg = PureBcs.deserializeFromBytes(type, pure.getRawBytes());
+                                        pure.setArg(arg);
+                                        pure.setBasePureType(BasePureType.valueOf(type.toUpperCase()));
                                     } catch (IOException e) {
                                         throw new IllegalArgumentException("Failed to deserialize MoveCall Pure type " + type, e);
                                     }
@@ -281,15 +272,18 @@ public class PureBcs {
                         for (Argument amount : amounts) {
                             String type = u64.name();
                             try {
-                                Argument.Input input = (Argument.Input) amount;
+                                if (!(amount instanceof Argument.Input input)) {
+                                    continue;
+                                }
                                 int finalIndex = input.getIndex();
-                                CallArgPure pure = (CallArgPure) inputs.entrySet().stream()
-                                        .filter(e -> e.getValue() == finalIndex)
-                                        .map(Map.Entry::getKey)
-                                        .findFirst()
-                                        .orElseThrow(() -> new IllegalStateException(
-                                                "CallArg index " + finalIndex + " not found in SplitCoins of ProgrammableTransaction"
-                                        ));
+                                CallArg callArg = programmableTx.getInputByIndex(finalIndex);
+                                if (callArg == null) {
+                                    throw new IllegalStateException(
+                                            "CallArg index " + finalIndex + " not found in SplitCoins of ProgrammableTransaction");
+                                }
+                                if (!(callArg instanceof CallArgPure pure)) {
+                                    continue;
+                                }
                                 Object arg = PureBcs.deserializeFromBytes(type, pure.getRawBytes());
                                 pure.setArg(arg);
                                 pure.setBasePureType(u64);

@@ -19,6 +19,7 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author : Same
@@ -79,6 +80,29 @@ public class ProgrammableTransaction {
 
     public LinkedHashMap<CallArg, Integer> getInputs() {
         return inputs;
+    }
+
+    /**
+     * Get the input at the given BCS positional index (extension point / Template Method).
+     *
+     * <p>The default implementation reverse-looks-up the value in the build-time
+     * {@code Map<CallArg, Integer>}, serving the "build transaction" semantics (identical Pure
+     * inputs are de-duplicated by value and share a single slot).
+     *
+     * <p>Deserialization semantics are the opposite: inputs form a positional array and commands
+     * reference inputs by their original position, so de-duplication is not allowed. That case is
+     * overridden by {@link DecodedProgrammableTransaction} with a positional O(1) implementation.
+     *
+     * @param index the positional index of the input in BCS
+     * @return the corresponding {@link CallArg}, or {@code null} if none exists
+     */
+    public CallArg getInputByIndex(int index) {
+        for (Map.Entry<CallArg, Integer> entry : inputs.entrySet()) {
+            if (entry.getValue() != null && entry.getValue() == index) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
     
     public List<Command> getCommands() {

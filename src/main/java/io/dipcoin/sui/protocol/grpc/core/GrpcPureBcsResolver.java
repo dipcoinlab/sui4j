@@ -16,7 +16,6 @@ import sui.rpc.v2.MovePackageServiceOuterClass.GetFunctionRequest;
 import sui.rpc.v2.MovePackageServiceOuterClass.GetFunctionResponse;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,12 +65,11 @@ public class GrpcPureBcsResolver {
         if (commands == null || commands.isEmpty()) {
             return;
         }
-        LinkedHashMap<CallArg, Integer> inputs = programmableTx.getInputs();
         for (Command command : commands) {
             if (command instanceof Command.MoveCall moveCall) {
-                resolveMoveCall(moveCall.getMoveCall(), inputs, grpcSuiClient);
+                resolveMoveCall(moveCall.getMoveCall(), programmableTx, grpcSuiClient);
             } else if (command instanceof Command.SplitCoins splitCoins) {
-                resolveSplitCoins(splitCoins, inputs);
+                resolveSplitCoins(splitCoins, programmableTx);
             }
         }
     }
@@ -82,7 +80,7 @@ public class GrpcPureBcsResolver {
 
     private static void resolveMoveCall(
             ProgrammableMoveCall moveCall,
-            LinkedHashMap<CallArg, Integer> inputs,
+            ProgrammableTransaction programmableTx,
             GrpcSuiClient grpcSuiClient) {
 
         List<Argument> arguments = moveCall.getArguments();
@@ -111,7 +109,7 @@ public class GrpcPureBcsResolver {
             if (!(argument instanceof Argument.Input input)) {
                 continue;
             }
-            CallArg callArg = findInputCallArg(inputs, input.getIndex());
+            CallArg callArg = findInputCallArg(programmableTx, input.getIndex());
             if (!(callArg instanceof CallArgPure pure)) {
                 continue;
             }
@@ -131,7 +129,7 @@ public class GrpcPureBcsResolver {
 
     private static void resolveSplitCoins(
             Command.SplitCoins splitCoins,
-            LinkedHashMap<CallArg, Integer> inputs) {
+            ProgrammableTransaction programmableTx) {
 
         List<Argument> amounts = splitCoins.getAmounts();
         if (amounts == null || amounts.isEmpty()) {
@@ -143,7 +141,7 @@ public class GrpcPureBcsResolver {
             if (!(amount instanceof Argument.Input input)) {
                 continue;
             }
-            CallArg callArg = findInputCallArg(inputs, input.getIndex());
+            CallArg callArg = findInputCallArg(programmableTx, input.getIndex());
             if (callArg == null) {
                 throw new IllegalStateException(
                         "CallArg index " + input.getIndex() + " not found in SplitCoins of ProgrammableTransaction");
@@ -188,18 +186,12 @@ public class GrpcPureBcsResolver {
     }
 
     /**
-     * Finds the {@link CallArg} whose index in the inputs map equals the given index.
+     * Finds the {@link CallArg} at the given BCS positional index, delegating to the
+     * {@link ProgrammableTransaction#getInputByIndex(int)} extension point so that
+     * deserialized transactions (with duplicate pure inputs) resolve positionally.
      */
-    private static CallArg findInputCallArg(LinkedHashMap<CallArg, Integer> inputs, int index) {
-        if (inputs == null || inputs.isEmpty()) {
-            return null;
-        }
-        for (Map.Entry<CallArg, Integer> entry : inputs.entrySet()) {
-            if (entry.getValue() != null && entry.getValue() == index) {
-                return entry.getKey();
-            }
-        }
-        return null;
+    private static CallArg findInputCallArg(ProgrammableTransaction programmableTx, int index) {
+        return programmableTx == null ? null : programmableTx.getInputByIndex(index);
     }
 
     /**
