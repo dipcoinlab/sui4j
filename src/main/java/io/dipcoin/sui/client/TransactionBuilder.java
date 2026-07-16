@@ -179,6 +179,27 @@ public class TransactionBuilder {
     }
 
     /**
+     * Build {@link GasData} that pays gas from an address balance (SIP-58).
+     *
+     * <p>Unlike the gas-coin-object based {@code buildGasData(...)}, {@code payment} is an empty
+     * list here: gas is charged on-chain directly from the {@code owner}'s SUI address balance,
+     * with no coin selection/merging and no object version/digest lookup, which is naturally
+     * stateless and supports concurrent submission.</p>
+     *
+     * <p><b>Usage constraint:</b> this must be serialized together with a
+     * {@link TransactionExpiration.ValidDuring} expiration, otherwise the chain rejects it
+     * (gas payment missing). See
+     * {@link #serializeTransactionBytes(ProgrammableTransaction, String, GasData, TransactionExpiration)}.</p>
+     *
+     * @param sender    the paying address (owner)
+     * @param gasPrice  reference gas price
+     * @param gasBudget gas budget
+     */
+    public static GasData buildBalanceGasData(String sender, long gasPrice, BigInteger gasBudget) {
+        return new GasData(List.of(), sender, gasPrice, gasBudget);
+    }
+
+    /**
      * Build TransactionData V1 version
      * @param programmableTx
      * @param sender
@@ -221,6 +242,24 @@ public class TransactionBuilder {
      */
     public static String serializeTransactionBytes(ProgrammableTransaction programmableTx, String sender, GasData gasData) throws IOException {
         TransactionData transactionData = buildTransactionDataV1(programmableTx, sender, gasData, TransactionExpiration.None.INSTANCE);
+        return BcsRegistry.serializeToBase64(transactionData, BcsRegistry.TRANSACTION_DATA_SERIALIZER);
+    }
+
+    /**
+     * Build txBytes (with a custom expiration type).
+     *
+     * <p>Used when paying gas from an address balance: {@code gasData} is built via
+     * {@link #buildBalanceGasData(String, long, BigInteger)} (empty payment) and
+     * {@code expiration} is a {@link TransactionExpiration.ValidDuring}.</p>
+     *
+     * @param programmableTx PTB
+     * @param sender         sender address
+     * @param gasData        gas data
+     * @param expiration     expiration type ({@code None} / {@code Epoch} / {@code ValidDuring})
+     * @return txBytes (Base64)
+     */
+    public static String serializeTransactionBytes(ProgrammableTransaction programmableTx, String sender, GasData gasData, TransactionExpiration expiration) throws IOException {
+        TransactionData transactionData = buildTransactionDataV1(programmableTx, sender, gasData, expiration);
         return BcsRegistry.serializeToBase64(transactionData, BcsRegistry.TRANSACTION_DATA_SERIALIZER);
     }
 

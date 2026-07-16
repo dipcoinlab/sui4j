@@ -14,6 +14,7 @@
 package io.dipcoin.sui.bcs;
 
 import io.dipcoin.sui.bcs.types.arg.call.CallArg;
+import io.dipcoin.sui.bcs.types.arg.call.CallArgFundsWithdrawal;
 import io.dipcoin.sui.bcs.types.arg.call.CallArgObjectArg;
 import io.dipcoin.sui.bcs.types.arg.call.CallArgPure;
 import io.dipcoin.sui.bcs.types.arg.object.*;
@@ -94,6 +95,9 @@ public class SuiBcs {
      * ObjectArg serializer
      */
     public static final BcsSerializer.BcsTypeSerializer<ObjectArg> OBJECT_ARG_SERIALIZER = (serializer, arg) -> {
+        if (arg == null) {
+            throw new IllegalArgumentException("ObjectArg must not be null: object reference is missing, please check whether the object has been synced and registered");
+        }
         if (arg instanceof ObjectArgImmOrOwnedObject) {
             serializer.writeU8((byte) 0); // ImmOrOwnedObject variant
             SUI_OBJECT_REF_SERIALIZER.serialize(serializer, ((ObjectArgImmOrOwnedObject) arg).getObjectRef());
@@ -112,6 +116,13 @@ public class SuiBcs {
      * CallArg serializer
      */
     public static final BcsSerializer.BcsTypeSerializer<CallArg> CALL_ARG_SERIALIZER = (serializer, arg) -> {
+        if (arg == null) {
+            // A null CallArg in the PTB inputs usually means the upper layer is missing a shared/owned
+            // object reference (e.g. an un-synced PriceFeed, Perpetual, cap, etc.) yet still called
+            // addInput(null). Fail fast with a clear message here to avoid the later arg.getClass()
+            // throwing the meaningless "Cannot invoke \"Object.getClass()\" because \"arg\" is null".
+            throw new IllegalArgumentException("CallArg must not be null: PTB input is missing an object reference, please check whether the corresponding shared/owned object has been synced and registered");
+        }
         if (arg instanceof CallArgPure) {
             serializer.writeU8((byte) 0); // Pure variant
             CallArgPure pure = (CallArgPure) arg;
@@ -121,6 +132,17 @@ public class SuiBcs {
             serializer.writeU8((byte) 1); // Object variant
             CallArgObjectArg objArg = (CallArgObjectArg) arg;
             serializeObjectArg(serializer, objArg.getObjectArg());
+        } else if (arg instanceof CallArgFundsWithdrawal) {
+            serializer.writeU8((byte) 2); // FundsWithdrawal variant (SIP-58 address balance withdrawal)
+            CallArgFundsWithdrawal fw = (CallArgFundsWithdrawal) arg;
+            // reservation: Reservation::MaxAmountU64(u64) -- enum variant 0 + u64
+            serializer.writeU8((byte) 0);
+            serializer.writeU64(fw.getAmount());
+            // type_arg: WithdrawalTypeArg::Balance(TypeTag) -- enum variant 0 + TypeTag (the type parameter T of Balance)
+            serializer.writeU8((byte) 0);
+            serializeTypeTag(serializer, fw.getBalanceType());
+            // withdraw_from: WithdrawFrom::Sender(0) / Sponsor(1)
+            serializer.writeU8(fw.isFromSponsor() ? (byte) 1 : (byte) 0);
         } else {
             throw new IllegalArgumentException("Unknown CallArg type: " + arg.getClass());
         }
@@ -130,6 +152,9 @@ public class SuiBcs {
      * serialize ObjectArg
      */
     private static void serializeObjectArg(BcsSerializer serializer, ObjectArg arg) throws IOException {
+        if (arg == null) {
+            throw new IllegalArgumentException("ObjectArg must not be null: object reference is missing, please check whether the object has been synced and registered");
+        }
         if (arg instanceof ObjectArgImmOrOwnedObject) {
             serializer.writeU8((byte) 0); // ImmOrOwnedObject variant
             SUI_OBJECT_REF_SERIALIZER.serialize(serializer, ((ObjectArgImmOrOwnedObject) arg).getObjectRef());
@@ -215,6 +240,9 @@ public class SuiBcs {
      * Argument serializer
      */
     public static final BcsSerializer.BcsTypeSerializer<Argument> ARGUMENT_SERIALIZER = (serializer, arg) -> {
+        if (arg == null) {
+            throw new IllegalArgumentException("Argument must not be null: PTB command argument is missing, please check the moveCall argument assembly");
+        }
         if (arg instanceof Argument.GasCoin) {
             serializer.writeU8((byte) 0); // GasCoin variant
         } else if (arg instanceof Argument.Input) {
@@ -329,6 +357,17 @@ public class SuiBcs {
         } else if (expiration instanceof TransactionExpiration.Epoch) {
             serializer.writeU8((byte) 1); // Epoch variant
             serializer.writeU64(((TransactionExpiration.Epoch) expiration).getEpoch());
+        } else if (expiration instanceof TransactionExpiration.ValidDuring validDuring) {
+            serializer.writeU8((byte) 2); // ValidDuring variant (SIP-58 address balance gas payment)
+            // Option<u64> minEpoch / maxEpoch / minTimestamp / maxTimestamp
+            serializer.writeOption(validDuring.getMinEpoch(), (s, v) -> s.writeU64(v));
+            serializer.writeOption(validDuring.getMaxEpoch(), (s, v) -> s.writeU64(v));
+            serializer.writeOption(validDuring.getMinTimestamp(), (s, v) -> s.writeU64(v));
+            serializer.writeOption(validDuring.getMaxTimestamp(), (s, v) -> s.writeU64(v));
+            // ObjectDigest chain (uleb length prefix + 32-byte genesis checkpoint digest)
+            OBJECT_DIGEST_SERIALIZER.serialize(serializer, validDuring.getChain());
+            // u32 nonce
+            serializer.writeU32(validDuring.getNonce());
         } else {
             throw new IllegalArgumentException("Unknown TransactionExpiration type: " + expiration.getClass());
         }
@@ -597,9 +636,36 @@ public class SuiBcs {
         return switch (flag) {
             case (byte) 0 -> new CallArgPure(deserializer.readBytes());
             case (byte) 1 -> deserializeObjectArg(deserializer);
+            case (byte) 2 -> deserializeFundsWithdrawal(deserializer);
             default -> throw new IllegalArgumentException("Unknown CallArg flag: " + flag);
         };
     };
+
+    /**
+     * deserialize FundsWithdrawal (SIP-58 address balance withdrawal, the 3rd CallArg variant)
+     */
+    public static CallArgFundsWithdrawal deserializeFundsWithdrawal(BcsDeserializer deserializer) throws IOException {
+        // reservation: Reservation::MaxAmountU64(u64) -- enum variant 0 + u64
+        byte reservationFlag = deserializer.readU8();
+        if (reservationFlag != (byte) 0) {
+            throw new IllegalArgumentException("Unknown Reservation flag: " + reservationFlag);
+        }
+        long amount = deserializer.readU64();
+        // type_arg: WithdrawalTypeArg::Balance(TypeTag) -- enum variant 0 + TypeTag (the type parameter T of Balance)
+        byte typeArgFlag = deserializer.readU8();
+        if (typeArgFlag != (byte) 0) {
+            throw new IllegalArgumentException("Unknown WithdrawalTypeArg flag: " + typeArgFlag);
+        }
+        TypeTag balanceType = TYPE_TAG_DESERIALIZER.deserialize(deserializer);
+        // withdraw_from: WithdrawFrom::Sender(0) / Sponsor(1)
+        byte fromFlag = deserializer.readU8();
+        boolean fromSponsor = switch (fromFlag) {
+            case (byte) 0 -> false;
+            case (byte) 1 -> true;
+            default -> throw new IllegalArgumentException("Unknown WithdrawFrom flag: " + fromFlag);
+        };
+        return new CallArgFundsWithdrawal(amount, balanceType, fromSponsor);
+    }
 
     /**
      * deserialize ObjectArg
@@ -712,7 +778,7 @@ public class SuiBcs {
     /**
      * ProgrammableTransaction deserializer
      */
-    public static final BcsDeserializer.BcsTypeDeserializer<ProgrammableTransaction> PROGRAMMABLE_TRANSACTION_DESERIALIZER = (deserializer) -> new ProgrammableTransaction(
+    public static final BcsDeserializer.BcsTypeDeserializer<ProgrammableTransaction> PROGRAMMABLE_TRANSACTION_DESERIALIZER = (deserializer) -> new DecodedProgrammableTransaction(
             deserializer.readVector(CALL_ARG_DESERIALIZER),
             deserializer.readVector(COMMAND_DESERIALIZER)
     );
@@ -739,6 +805,14 @@ public class SuiBcs {
         return switch (flag) {
             case (byte) 0 -> TransactionExpiration.None.INSTANCE;
             case (byte) 1 -> new TransactionExpiration.Epoch(deserializer.readU64());
+            case (byte) 2 -> new TransactionExpiration.ValidDuring(
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    deserializer.readOption(BcsDeserializer::readU64),
+                    OBJECT_DIGEST_DESERIALIZER.deserialize(deserializer),
+                    deserializer.readU32()
+            );
             default -> throw new IllegalArgumentException("Unknown TransactionExpiration type flag: " + flag);
         };
     };

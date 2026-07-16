@@ -15,6 +15,7 @@ Sui4J is a Java SDK designed specifically for the Sui blockchain, providing comp
   - [🔗 RPC Client](#-rpc-client)
   - [🔐 Cryptocurrency Module](#-cryptocurrency-module)
   - [📦 BCS Serialization Module](#-bcs-serialization-module)
+  - [🌐 gRPC Client](#-grpc-client)
 - [🧪 Test Cases](#-test-cases)
 - [📚 API Reference](#-api-reference)
 - [🤝 Contributing Guide](#-contributing-guide)
@@ -36,14 +37,14 @@ Sui4J is a Java SDK designed specifically for the Sui blockchain, providing comp
 <dependency>
     <groupId>io.dipcoin</groupId>
     <artifactId>sui4j</artifactId>
-    <version>0.1.6</version>
+    <version>0.1.7</version>
 </dependency>
 ```
 
 ### 🎯 Gradle Dependency
 
 ```gradle
-implementation 'io.dipcoin:sui4j:0.1.6'
+implementation 'io.dipcoin:sui4j:0.1.7'
 ```
 
 ## 🎯 Basic Usage
@@ -236,6 +237,14 @@ public class Sui4jBasicExample {
 - **Function**: Execute batch transaction requests
 - **Test Case**: [`SuiClientTest.testBatchTransaction()`](src/test/java/com/dipcoin/sui/protocol/SuiClientTest.java#L494)
 
+##### Latest Checkpoint Sequence Number Query
+- **Function**: Get the sequence number of the latest checkpoint
+- **Test Case**: [`SuiClientTest.testGetLatestCheckpointSequenceNumber()`](src/test/java/com/dipcoin/sui/protocol/SuiClientTest.java#L623)
+
+##### Total Transaction Blocks Query
+- **Function**: Get the total number of known transaction blocks
+- **Test Case**: [`SuiClientTest.testGetTotalTransactionBlocks()`](src/test/java/com/dipcoin/sui/protocol/SuiClientTest.java#L646)
+
 ### 🔐 Cryptocurrency Module
 
 #### Ed25519KeyPair
@@ -272,6 +281,10 @@ public class Sui4jBasicExample {
 - **Function**: Boundary condition key testing
 - **Test Case**: [`Ed25519KeyPairTest.boundaryKeyTests()`](src/test/java/com/dipcoin/sui/crypto/Ed25519KeyPairTest.java#L140)
 
+##### Signature Verification
+- **Function**: Verify Ed25519 signatures (personal message / transaction data)
+- **Test Case**: [`Ed25519KeyPairTest.verifySignature()`](src/test/java/com/dipcoin/sui/crypto/Ed25519KeyPairTest.java#L175)
+
 #### Secp256k1KeyPair
 
 ##### Key Pair Generation
@@ -293,6 +306,10 @@ public class Sui4jBasicExample {
 ##### Private Key Encoding
 - **Function**: Encode private key to hexadecimal format
 - **Test Case**: [`Scep256k1KeyPairTest.encodePrivateKey_shouldReturnOriginalHex()`](src/test/java/com/dipcoin/sui/crypto/Scep256k1KeyPairTest.java#L99)
+
+##### Signature Verification
+- **Function**: Verify Secp256k1 signatures (personal message / transaction data)
+- **Test Case**: [`Scep256k1KeyPairTest.verifySignature()`](src/test/java/com/dipcoin/sui/crypto/Scep256k1KeyPairTest.java#L140)
 
 ### 📦 BCS Serialization Module
 
@@ -515,6 +532,14 @@ public class Sui4jBasicExample {
 - **Function**: Special character string serialization
 - **Test Case**: [`SuiBcsTest.testSpecialCharactersInStrings()`](src/test/java/com/dipcoin/sui/bcs/SuiBcsTest.java#L417)
 
+##### Transaction Kind Serialization and Deserialization
+- **Function**: TransactionKind serialization and deserialization
+- **Test Case**: [`SuiBcsTest.testTransactionKind()`](src/test/java/com/dipcoin/sui/bcs/SuiBcsTest.java#L444)
+
+##### Transaction Data Deserialization (Base64 → Transaction Object)
+- **Function**: Deserialize Base64 transaction data into a transaction object and round-trip serialize it
+- **Test Case**: [`SuiBcsTest.testTransactionData()`](src/test/java/com/dipcoin/sui/bcs/SuiBcsTest.java#L472)
+
 #### Pure BCS Serialization
 
 ##### Basic Type Serialization
@@ -567,6 +592,129 @@ public class Sui4jBasicExample {
 - **Function**: BCS serialization performance testing
 - **Test Case**: [`BcsIndexTest.testPerformance()`](src/test/java/com/dipcoin/sui/bcs/BcsIndexTest.java#L1041)
 
+### 🌐 gRPC Client
+
+A high-performance client built on the Sui gRPC (v2) API, offering capabilities on par with JSON-RPC while supporting both synchronous and asynchronous calls as well as server-side streaming subscriptions.
+
+#### Read Operations (Read RPC)
+
+##### Service Info Query
+- **Function**: Get gRPC service info (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetServiceInfo()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L172)
+  - [`GrpcSuiClientTest.testGetServiceInfoAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L195)
+
+##### Object Query
+- **Function**: Get single / batch object info (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetObject()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L210)
+  - [`GrpcSuiClientTest.testGetObjectAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L239)
+  - [`GrpcSuiClientTest.testBatchGetObjects()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L255)
+  - [`GrpcSuiClientTest.testBatchGetObjectsAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L286)
+
+##### Transaction Query
+- **Function**: Get single / batch transaction info (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetTransaction()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L302)
+  - [`GrpcSuiClientTest.testGetTransactionAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L328)
+  - [`GrpcSuiClientTest.testBatchGetTransactions()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L345)
+  - [`GrpcSuiClientTest.testBatchGetTransactionsAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L368)
+
+##### Checkpoint Query
+- **Function**: Get the latest checkpoint / get a checkpoint by sequence number (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetLatestCheckpoint()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L391)
+  - [`GrpcSuiClientTest.testGetCheckpointBySequenceNumber()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L418)
+  - [`GrpcSuiClientTest.testGetCheckpointAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L447)
+
+##### Epoch Query
+- **Function**: Get current epoch info (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetCurrentEpoch()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L461)
+  - [`GrpcSuiClientTest.testGetEpochAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L480)
+
+##### Dynamic Fields Query
+- **Function**: List dynamic fields (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testListDynamicFields()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L499)
+  - [`GrpcSuiClientTest.testListDynamicFieldsAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L516)
+
+##### Owned Objects Query
+- **Function**: List objects owned by an address (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testListOwnedObjects()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L532)
+  - [`GrpcSuiClientTest.testListOwnedObjectsAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L558)
+
+##### Coin Info and Balance Query
+- **Function**: Query coin metadata, single-coin balance, and balance lists (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetCoinInfo()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L580)
+  - [`GrpcSuiClientTest.testGetCoinInfoAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L598)
+  - [`GrpcSuiClientTest.testGetBalance()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L616)
+  - [`GrpcSuiClientTest.testGetBalanceAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L638)
+  - [`GrpcSuiClientTest.testListBalances()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L656)
+  - [`GrpcSuiClientTest.testListBalancesAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L680)
+
+##### Move Package / Datatype / Function Query
+- **Function**: Query Move packages, datatypes, functions, and package versions (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testGetPackage()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L700)
+  - [`GrpcSuiClientTest.testGetPackageAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L721)
+  - [`GrpcSuiClientTest.testGetDatatype()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L738)
+  - [`GrpcSuiClientTest.testGetDatatypeAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L761)
+  - [`GrpcSuiClientTest.testGetFunction()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L780)
+  - [`GrpcSuiClientTest.testGetFunctionAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L802)
+  - [`GrpcSuiClientTest.testListPackageVersions()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L821)
+  - [`GrpcSuiClientTest.testListPackageVersionsAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L837)
+
+##### Name Service (SuiNS) Resolution
+- **Function**: Forward / reverse name resolution (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testLookupName()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L857)
+  - [`GrpcSuiClientTest.testLookupNameAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L872)
+  - [`GrpcSuiClientTest.testReverseLookupName()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L888)
+  - [`GrpcSuiClientTest.testReverseLookupNameAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L902)
+
+##### Signature Verification
+- **Function**: Verify signature validity, covering invalid-signature and address-mismatch cases (sync / async)
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testVerifySignatureValid()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L946)
+  - [`GrpcSuiClientTest.testVerifySignatureValidAsync()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L972)
+  - [`GrpcSuiClientTest.testVerifySignatureWithInvalidSignature()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L998)
+  - [`GrpcSuiClientTest.testVerifySignatureWithAddressMismatch()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1028)
+
+#### Streaming Subscriptions (Subscription)
+
+##### Checkpoint Subscription
+- **Function**: Subscribe to the checkpoint stream, with support for querying transactions after subscribing
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testSubscribeCheckpoints()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1060)
+  - [`GrpcSuiClientTest.testSubscribeCheckpointsAndQueryTxs()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1117)
+
+##### Event Subscription
+- **Function**: Subscribe to the event stream
+- **Test Case**: [`GrpcSuiClientTest.testSubscribeEvent()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1203)
+
+#### Write Operations (Write RPC)
+
+##### Transaction Execution and Simulation
+- **Function**: Execute a transaction / simulate a transaction
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testExecuteTransaction()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1314)
+  - [`GrpcSuiClientTest.testSimulateTransaction()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1331)
+
+#### Client Configuration
+
+##### Sync / Async Result Consistency
+- **Function**: Verify that the synchronous and asynchronous APIs return consistent results
+- **Test Case**: [`GrpcSuiClientTest.testSyncAndAsyncReturnConsistentResults()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1345)
+
+##### Custom gRPC Options
+- **Function**: Custom gRPC options and metadata request headers
+- **Test Case**: 
+  - [`GrpcSuiClientTest.testCustomGrpcOptions()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1368)
+  - [`GrpcSuiClientTest.testMetadataHeadersInOptions()`](src/test/java/com/dipcoin/sui/protocol/grpc/GrpcSuiClientTest.java#L1397)
+
 ## 🧪 Test Cases
 
 ### 🏃‍♂️ Run All Tests
@@ -581,6 +729,9 @@ mvn test
 # RPC client tests
 mvn test -Dtest=SuiClientTest
 mvn test -Dtest=PythClientTest
+
+# gRPC client tests
+mvn test -Dtest=GrpcSuiClientTest
 
 # Cryptocurrency tests
 mvn test -Dtest=Ed25519KeyPairTest
@@ -600,6 +751,7 @@ mvn test -Dtest=BcsSerializerTest
 ### 📋 Main Classes
 
 - `SuiClient` - Sui RPC client
+- `GrpcSuiClient` - Sui gRPC client
 - `PythClient` - Pyth oracle client
 - `BcsSerializer` - BCS serializer
 - `BcsDeserializer` - BCS deserializer
